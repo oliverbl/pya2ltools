@@ -33,12 +33,17 @@ class DwarfMember:
     @staticmethod
     def from_die(die, cache):
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
-        parser = DWARFExprParser(die.cu.structs)
-        op = parser.parse_expr(die.attributes["DW_AT_data_member_location"].value)
-        if op[0].op_name != "DW_OP_plus_uconst":
-            print("unknown member location type", op)
-            return None
-        _self = DwarfMember(name, op[0].args[0])
+
+        offset_form: str = die.attributes["DW_AT_data_member_location"].form
+        if offset_form.startswith("DW_FORM_data") or offset_form == "DW_FORM_implicit_const":
+            offset = die.attributes["DW_AT_data_member_location"].value
+        else:
+            op = DWARFExprParser(die.cu.structs).parse_expr(die.attributes["DW_AT_data_member_location"].value)
+            if op[0].op_name != "DW_OP_plus_uconst":
+                print("unknown member location type", op)
+                return None
+            offset = op[0].args[0]
+        _self = DwarfMember(name, offset=offset)
         cache[die] = _self
         return _self
 
@@ -128,11 +133,44 @@ class DwarfEnum:
 class DwarfVariable:
     name: str
     location: int
+    file: str
+    line: str
     datatype: Any = None
 
     @staticmethod
-    def from_die(die, cache):
+    def resolve_file_name(die):
+        cu = die.cu
+        val = die.attributes["DW_AT_decl_file"].value
+
+        _lineprogram = die.dwarfinfo.line_program_for_CU(cu)
+        if _lineprogram is None:
+            return "Could not resolve"
+        if _lineprogram.header.version >= 5:
+            return (
+                _lineprogram.header.file_entry[val].name.decode(
+                    "utf-8", errors="ignore"
+                )
+                if _lineprogram
+                and val >= 0
+                and val < len(_lineprogram.header.file_entry)
+                else "(N/A)"
+            )
+        if val == 0:
+            return "Not found"
+        return (
+            _lineprogram.header.file_entry[val - 1].name.decode(
+                "utf-8", errors="ignore"
+            )
+            if _lineprogram and val > 0 and val <= len(_lineprogram.header.file_entry)
+            else "(N/A)"
+        )
+
+    @staticmethod
+    def from_die(die, cache) -> Self:
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
+        print(name)
+        file = DwarfVariable.resolve_file_name(die)
+        line = die.attributes["DW_AT_decl_line"].value
         parser = DWARFExprParser(die.cu.structs)
         op = parser.parse_expr(die.attributes["DW_AT_location"].value)
         if len(op) != 1 or op[0].op_name != "DW_OP_addr":
@@ -140,34 +178,30 @@ class DwarfVariable:
             return None
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
         _self = DwarfVariable(
-            name=name,
-            location=op[0].args[0],
-            datatype=None
-            )
+            name=name, location=op[0].args[0], file=file, line=line, datatype=None
+        )
         cache[die] = _self
         _self.datatype = get_datatype_from_die(ref_die, cache)
         return _self
 
 
 def get_datatype_from_die(die, cache, datatype_name="Unknown"):
-    dimensions = [1]
-
     if die in cache:
         return cache[die]
+
+    print(die.tag)
 
     if die.tag == "DW_TAG_array_type":
         return DwarfArray.from_die(die, cache)
 
     if die.tag == "DW_TAG_typedef":
         datatype_name = die.attributes["DW_AT_name"].value.decode("utf-8")
-        print(datatype_name)
         if datatype_name in basetypes:
             return basetypes[datatype_name]
         if not "DW_AT_type" in die.attributes:
             print("typedef without type", die.attributes["DW_AT_name"].value)
             return None
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
-        cache[die] = datatype_name
         return get_datatype_from_die(ref_die, cache, datatype_name=datatype_name)
 
     if die.tag == "DW_TAG_structure_type" or die.tag == "DW_TAG_union_type":

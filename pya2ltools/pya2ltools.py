@@ -29,7 +29,6 @@ def str_to_variable_path(path: str) -> list[str | int]:
     return path
 
 
-@dataclass_json
 @dataclass
 class DwarfInfo:
     variables: dict[str, DwarfVariable] = field(default_factory=dict)
@@ -81,23 +80,21 @@ class DwarfInfo:
                     return
 
             v = DwarfVariable.from_die(die, self.cache)
-            self.variables[v.name] = v
+            if v.name not in self.variables:
+                self.variables[v.name] = []
+            self.variables[v.name].append(v)
 
         for child in die.iter_children():
             self.die_info_rec(child, variable_name)
 
 
 def main():
-    path = Path("test") / "ots_HIL.out"
+    path = Path("test_structs.o")
 
     dwarf_info: DwarfInfo = DwarfInfo.from_elffile(path)
 
-    var = dwarf_info.variables["demQueue"]
-    print(var)
-
-    with open("test.json", "w") as f:
-        f.write(dwarf_info.to_json())
-
+    for name, var in dwarf_info.variables.items():
+        print(var)
 
 if __name__ == "__main__":
     main()
