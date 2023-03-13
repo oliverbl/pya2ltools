@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from elftools.dwarf.dwarf_expr import DWARFExprParser
 from typing import Any, Self
 
+
 @dataclass
 class DwarfBaseType:
     name: str
@@ -30,14 +31,16 @@ class DwarfMember:
     datatype: Any = None
 
     @staticmethod
-    def from_die(die):
+    def from_die(die, cache):
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
         parser = DWARFExprParser(die.cu.structs)
         op = parser.parse_expr(die.attributes["DW_AT_data_member_location"].value)
         if op[0].op_name != "DW_OP_plus_uconst":
             print("unknown member location type", op)
             return None
-        return DwarfMember(name, op[0].args[0])
+        _self = DwarfMember(name, op[0].args[0])
+        cache[die] = _self
+        return _self
 
 
 @dataclass
@@ -62,17 +65,18 @@ class DwarfArray:
         return dimensions
 
     @staticmethod
-    def from_die(die):
+    def from_die(die, cache):
         dimensions = DwarfArray.get_dimensions(die)
         if "DW_AT_byte_size" not in die.attributes:
             size = 0
         else:
             size = die.attributes["DW_AT_byte_size"].value
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
-        datatype=get_datatype_from_die(ref_die)
-        return DwarfArray(
-            dimensions=dimensions, size=size, datatype=datatype
-        )
+        _self = DwarfArray(dimensions=dimensions, size=size, datatype=None)
+        cache[die] = _self
+        _self.datatype = get_datatype_from_die(ref_die, cache)
+        return _self
+
 
 @dataclass
 class DwarfStructure:
@@ -81,18 +85,19 @@ class DwarfStructure:
     members: dict[str, DwarfMember] = field(default_factory=dict)
 
     @staticmethod
-    def from_die(die) -> Self:
+    def from_die(die, cache) -> Self:
         size = die.attributes["DW_AT_byte_size"].value
         members = {}
         _self = DwarfStructure(size=size, members=members)
+        cache[die] = _self
         for child in die.iter_children():
             if child.tag != "DW_TAG_member":
                 print("structure child but not member?")
                 print(child)
                 continue
-            m = DwarfMember.from_die(child)
+            m = DwarfMember.from_die(child, cache)
             m.datatype = get_datatype_from_die(
-                child.get_DIE_from_attribute("DW_AT_type")
+                child.get_DIE_from_attribute("DW_AT_type"), cache
             )
             members[m.name] = m
         return _self
@@ -104,8 +109,10 @@ class DwarfEnum:
     members: dict[str, int] = field(default_factory=dict)
 
     @staticmethod
-    def from_die(die) -> Self:
+    def from_die(die, cache) -> Self:
         members = {}
+        _self = DwarfEnum(members=members)
+        cache[die] = _self
         for child in die.iter_children():
             if child.tag != "DW_TAG_enumerator":
                 print("enum child but not enumerator?")
@@ -114,7 +121,7 @@ class DwarfEnum:
             name = child.attributes["DW_AT_name"].value.decode("utf-8")
             value = child.attributes["DW_AT_const_value"].value
             members[name] = value
-        return DwarfEnum(members=members)
+        return _self
 
 
 @dataclass
@@ -124,7 +131,7 @@ class DwarfVariable:
     datatype: Any = None
 
     @staticmethod
-    def from_die(die):
+    def from_die(die, cache):
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
         parser = DWARFExprParser(die.cu.structs)
         op = parser.parse_expr(die.attributes["DW_AT_location"].value)
@@ -132,33 +139,44 @@ class DwarfVariable:
             print("unknown location type", die.attributes["DW_AT_location"].value)
             return None
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
-        return DwarfVariable(
-            name=name, location=op[0].args[0], datatype=get_datatype_from_die(ref_die)
-        )
-    
-def get_datatype_from_die(die, datatype_name="Unknown"):
+        _self = DwarfVariable(
+            name=name,
+            location=op[0].args[0],
+            datatype=None
+            )
+        cache[die] = _self
+        _self.datatype = get_datatype_from_die(ref_die, cache)
+        return _self
+
+
+def get_datatype_from_die(die, cache, datatype_name="Unknown"):
     dimensions = [1]
 
+    if die in cache:
+        return cache[die]
+
     if die.tag == "DW_TAG_array_type":
-        return DwarfArray.from_die(die)
+        return DwarfArray.from_die(die, cache)
 
     if die.tag == "DW_TAG_typedef":
         datatype_name = die.attributes["DW_AT_name"].value.decode("utf-8")
+        print(datatype_name)
         if datatype_name in basetypes:
             return basetypes[datatype_name]
         if not "DW_AT_type" in die.attributes:
             print("typedef without type", die.attributes["DW_AT_name"].value)
             return None
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
-        return get_datatype_from_die(ref_die, datatype_name=datatype_name)
+        cache[die] = datatype_name
+        return get_datatype_from_die(ref_die, cache, datatype_name=datatype_name)
 
     if die.tag == "DW_TAG_structure_type" or die.tag == "DW_TAG_union_type":
-        struct = DwarfStructure.from_die(die)
+        struct = DwarfStructure.from_die(die, cache)
         struct.name = datatype_name
         return struct
 
     if die.tag == "DW_TAG_enumeration_type":
-        enum = DwarfEnum.from_die(die)
+        enum = DwarfEnum.from_die(die, cache)
         enum.name = datatype_name
         return enum
 
@@ -170,7 +188,6 @@ def get_datatype_from_die(die, datatype_name="Unknown"):
     if die.tag == "DW_TAG_subroutine_type":
         return DwarfBaseType("Function", 0)
 
-
     if die.tag == "DW_TAG_unspecified_type":
         return DwarfBaseType("void", 0)
 
@@ -181,8 +198,7 @@ def get_datatype_from_die(die, datatype_name="Unknown"):
     ]
 
     if die.tag in tags_to_follow:
-        return get_datatype_from_die(die.get_DIE_from_attribute("DW_AT_type"))
-
+        return get_datatype_from_die(die.get_DIE_from_attribute("DW_AT_type"), cache)
 
     print("unknown datatype", die.tag)
     print(die)
