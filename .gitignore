@@ -3,3 +3,6 @@ docs/
 .devcontainer/
 test/
 __pycache__/
+*.txt
+*.json
+*.o
