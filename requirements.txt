@@ -1,0 +1,6 @@
+pyelftools
+intelhex
+python-can
+pya2ldb
+pyxcp
+dataclasses-json
