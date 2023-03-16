@@ -35,10 +35,15 @@ class DwarfMember:
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
 
         offset_form: str = die.attributes["DW_AT_data_member_location"].form
-        if offset_form.startswith("DW_FORM_data") or offset_form == "DW_FORM_implicit_const":
+        if (
+            offset_form.startswith("DW_FORM_data")
+            or offset_form == "DW_FORM_implicit_const"
+        ):
             offset = die.attributes["DW_AT_data_member_location"].value
         else:
-            op = DWARFExprParser(die.cu.structs).parse_expr(die.attributes["DW_AT_data_member_location"].value)
+            op = DWARFExprParser(die.cu.structs).parse_expr(
+                die.attributes["DW_AT_data_member_location"].value
+            )
             if op[0].op_name != "DW_OP_plus_uconst":
                 print("unknown member location type", op)
                 return None

@@ -2,6 +2,7 @@ from pathlib import Path
 from dwarf.reader import DwarfInfo
 from a2l.reader import read_a2l
 
+
 def test_dwarf():
     path = Path("test_structs.o")
 
@@ -16,8 +17,8 @@ def test_a2l():
     a2l_file = read_a2l(path)
     print(a2l_file)
 
-def main():
 
+def main():
     test_a2l()
 
 

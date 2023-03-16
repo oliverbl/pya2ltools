@@ -47,7 +47,9 @@ class DwarfInfo:
 
             for CU in dwarfinfo.iter_CUs():
                 top_DIE = CU.get_top_DIE()
-                _self.read_global_variable_info_from_die(top_DIE, variable_name=variable_name)
+                _self.read_global_variable_info_from_die(
+                    top_DIE, variable_name=variable_name
+                )
             return _self
 
     def get_address_by_variable_path(self, variable_path: str) -> int:

@@ -40,7 +40,7 @@ class A2lFncValues:
 @dataclass
 class A2LRecordLayout:
     name: str = ""
-    fields :list[A2lNoAxisPts | A2LAxisPts | A2lFncValues] = field(default_factory=list)
+    fields: list[A2lNoAxisPts | A2LAxisPts | A2lFncValues] = field(default_factory=list)
 
 
 @dataclass
@@ -91,13 +91,12 @@ class A2LMeasurement:
     format: str = ""
     matrix_dim: list[int] = field(default_factory=list)
 
+
 @dataclass
 class A2LCharacteristic:
-    name : str
-    description : str
-    record_layout : A2LRecordLayout = None
-
-
+    name: str
+    description: str
+    record_layout: A2LRecordLayout = None
 
 
 @dataclass
@@ -121,6 +120,7 @@ class A2LProject:
     description: str = ""
     modules: list[A2LModule] = field(default_factory=list)
     header: Optional[A2LHeader] = None
+
 
 @dataclass
 class A2lFile:
