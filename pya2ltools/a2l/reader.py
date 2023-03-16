@@ -1,20 +1,37 @@
 from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
+
+from .util import is_number
 from .model import (
-    A2LCharacteristic,
+    A2LAnnotation,
+    A2LAxisDescription,
+    A2LAxisDescriptionComAxis,
+    A2LAxisDescriptionCurveAxis,
+    A2LAxisDescriptionFixAxis,
+    A2LAxisDescriptionResAxis,
     A2LCompuMethod,
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
-    A2LHeader,
-    A2LMeasurement,
     A2LModPar,
-    A2LModule,
-    A2LProject,
     A2LRecordLayout,
-    A2lFile,
 )
+from .characteristic_model import (
+    A2LCharacteristic,
+    A2LCharacteristicArray,
+    A2LCharacteristicCube4,
+    A2LCharacteristicCuboid,
+    A2LCharacteristicCurve,
+    A2LCharacteristicMap,
+    A2LCharacteristicValue,
+    A2LCharactersiticAscii,
+    A2LMeasurement,
+    DependentCharacteristic,
+    VirtualCharacteristic,
+)
+
+from .project_model import A2LHeader, A2LModule, A2LProject, A2lFile
 
 
 # a lexing function takes a list of tokens and returns and Object and sublist of the tokens, after processing
@@ -127,13 +144,15 @@ def parse_description(tokens: list[str]) -> Tuple[str, list[str]]:
     if tokens[0] == '""':
         return "", tokens[1:]
 
-    description = tokens[0][1:]
+    description = tokens[0][1:] + " "
+    tokens = tokens[1:]
 
     while not tokens[0].endswith('"'):
         description += tokens[0] + " "
         tokens = tokens[1:]
 
     description += tokens[0][:-1]
+
     return description, tokens[1:]
 
 
@@ -280,12 +299,93 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
     return A2LRecordLayout(name=name), tokens[2:]
 
 
-def parse_value_charactersitics(tokens: list[str]) -> Tuple[Any, list[str]]:
-    pass
+def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
+    if tokens[0] != "ANNOTATION":
+        raise Exception("ANNOTATION expected, got " + tokens[0])
+
+    tokens = tokens[1:]
+
+    params = {}
+
+    while tokens[0] != "/end" or tokens[1] != "ANNOTATION":
+        if tokens[0] == "ANNOTATION_LABEL":
+            params["label"], tokens = parse_description(tokens[1:])
+        elif tokens[0] == "ANNOTATION_ORIGIN":
+            params["origin"], tokens = parse_description(tokens[1:])
+        elif tokens[0] == "/begin" and tokens[1] == "ANNOTATION_TEXT":
+            params["text"] = []
+            tokens = tokens[2:]
+            while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
+                text, tokens = parse_description(tokens)
+                params["text"] = text
+            tokens = tokens[2:]
+        else:
+            print(tokens[:20])
+            raise Exception("Unknown token " + tokens[0] + " when parsing ANNOTATION")
+    return A2LAnnotation(**params), tokens[2:]
 
 
-def parse_array_characteristics(tokens: list[str]) -> Tuple[Any, list[str]]:
-    pass
+def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
+    if tokens[0] != "AXIS_DESCR":
+        raise Exception("AXIS_DESCR expected, got " + tokens[0])
+
+    tokens = tokens[1:]
+
+    axis_types = {
+        "STD_AXIS": A2LAxisDescription,
+        "FIX_AXIS": A2LAxisDescriptionFixAxis,
+        "COM_AXIS": A2LAxisDescriptionComAxis,
+        "CURVE_AXIS": A2LAxisDescriptionCurveAxis,
+        "RES_AXIS": A2LAxisDescriptionResAxis,
+    }
+    if tokens[0] not in axis_types:
+        raise Exception("Unknown axis type " + tokens[0])
+
+    axis_type = axis_types[tokens[0]]
+    params = {}
+    params["measurement"] = tokens[1]
+    params["compu_method"] = tokens[2]
+    params["size"] = int(tokens[3])
+    params["min"] = int(tokens[4])
+    params["max"] = int(tokens[5])
+
+    tokens = tokens[6:]
+
+    def fix_axis_par_dist(tokens: list[str]) -> Tuple[Any, list[str]]:
+        numbers = []
+        tokens = tokens[1:]
+        while is_number(tokens[0]):
+            numbers.append(int(tokens[0]))
+            tokens = tokens[1:]
+        return {"par_dist": numbers}, tokens
+
+    def fix_axis_par_list(tokens: list[str]) -> Tuple[Any, list[str]]:
+        numbers = []
+        tokens = tokens[1:]
+        while is_number(tokens[0]):
+            numbers.append(int(tokens[0]))
+            tokens = tokens[1:]
+        return {"par_dist": numbers}, tokens[2:]
+
+    lexer = {
+        "AXIS_PTS_REF": lambda x: ({"axis_pts_ref": x[1]}, x[2:]),
+        "CURVE_AXIS_REF": lambda x: ({"curve_axis_ref": x[1]}, x[2:]),
+        "MONOTONY": lambda x: ({"monotony": x[1]}, x[2:]),
+        "/begin": lambda x: ({}, x[1:]),
+        "FIX_AXIS_PAR_DIST": fix_axis_par_dist,
+        "FIX_AXIS_PAR_LIST": fix_axis_par_list,
+    }
+
+    while tokens[0] != "/end" or tokens[1] != "AXIS_DESCR":
+        func = lexer.get(tokens[0], None)
+        if func is None:
+            print(tokens[:20])
+            raise Exception("Unknown token " + tokens[0] + " when parsing AXIS_DESCR")
+        key_value, tokens = func(tokens)
+        for k, v in key_value.items():
+            params[k] = v
+
+    return axis_type(**params), tokens[2:]
 
 
 def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -293,45 +393,105 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         raise Exception("CHARACTERISTIC expected, got " + tokens[0])
 
     name = tokens[1]
-    description, tokens = parse_description(tokens[1:])
+    description, tokens = parse_description(tokens[2:])
 
     characteristic_type = tokens[0]
 
-    char_types = ["VALUE", "VAL_BLK", "ASCII", "CURVE", "MAP", "CUBOID", "CUBE_4"]
+    char_types = {
+        "VALUE": (A2LCharacteristicValue, []),
+        "VAL_BLK": (A2LCharacteristicArray, ["MATRIX_DIM"]),
+        "ASCII": (A2LCharactersiticAscii, ["NUMBER"]),
+        "CURVE": (A2LCharacteristicCurve, ["AXIS_DESCR"]),
+        "MAP": (A2LCharacteristicMap, ["AXIS_DESCR"]),
+        "CUBOID": (A2LCharacteristicCuboid, ["AXIS_DESCR"]),
+        "CUBE_4": (A2LCharacteristicCube4, ["AXIS_DESCR"]),
+    }
 
-    if characteristic_type in char_types:
-        pass
-    else:
+    if not characteristic_type in char_types:
         raise Exception("Unknown characteristic type, got " + tokens[0])
 
-    ecu_address = tokens[1]
-    record_layout = tokens[2]
-    some_int = tokens[3]
-    something_else = tokens[4]
-    min = tokens[5]
-    max = tokens[6]
+    char_type, expected_keywords = char_types[characteristic_type]
+
+    params = {}
+    params["ecu_address"] = tokens[1]
+    params["record_layout"] = tokens[2]
+    params["unknown"] = tokens[3]
+    params["compu_method"] = tokens[4]
+    params["min"] = tokens[5]
+    params["max"] = tokens[6]
 
     tokens = tokens[7:]
 
-    while tokens[0] != "/end" or tokens[1] != "CHARACTERISTIC":
-        if tokens[0] == "EXTENDED_LIMITS":
-            extended_min = tokens[1]
-            extended_max = tokens[2]
-            tokens = tokens[3:]
-        elif tokens[0] == "FORMAT":
-            format = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "DISPLAY_IDENTIFIER":
-            display_name = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "BIT_MASK":
-            bitmask = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "MATRIX_DIM":
-            matrix_dim, tokens = parse_matrix_dim(tokens)
-        else:
+    def local_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
+        annotation, tokens = parse_annotation(tokens)
+        return {"annotations": annotation}, tokens
+
+    def local_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
+        dimensions, tokens = parse_matrix_dim(tokens)
+        return {"matrix_dim": dimensions}, tokens
+
+    def local_axis_descr(tokens: list[str]) -> Tuple[Any, list[str]]:
+        axis_descr, tokens = parse_axis_descr(tokens)
+        return {"axis_descriptions": [axis_descr]}, tokens
+
+    def dependent_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+        tokens = tokens[1:]
+        formula, tokens = parse_description(tokens)
+        variables = []
+        while tokens[0] != "/end" or tokens[1] != "DEPENDENT_CHARACTERISTIC":
+            variables.append(tokens[0])
             tokens = tokens[1:]
-    return A2LCharacteristic(name=name, description=description), tokens[2:]
+        return {
+            "dependent_characteristic": DependentCharacteristic(formula, variables)
+        }, tokens[2:]
+
+    def virtual_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+        tokens = tokens[1:]
+        formula, tokens = parse_description(tokens)
+        variables = []
+        while tokens[0] != "/end" or tokens[1] != "VIRTUAL_CHARACTERISTIC":
+            variables.append(tokens[0])
+            tokens = tokens[1:]
+        return {"virtual_characteristic": VirtualCharacteristic(formula, variables)}, tokens[2:]
+
+    lexer = {
+        "EXTENDED_LIMITS": lambda x: (
+            {"extended_min": x[1], "extended_max": x[2]},
+            x[3:],
+        ),
+        "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
+        "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": x[1]}, x[2:]),
+        "NUMBER": lambda x: ({"size": x[1]}, x[2:]),
+        "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
+        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": x[1]}, x[2:]),
+        "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
+        "/begin": lambda x: ({}, x[1:]),
+        "MATRIX_DIM": lambda x: local_matrix_dim(x),
+        "AXIS_DESCR": lambda x: local_axis_descr(x),
+        "ANNOTATION": lambda x: local_annotation(x),
+        "DEPENDENT_CHARACTERISTIC": lambda x: dependent_characteristic(x),
+        "VIRTUAL_CHARACTERISTIC": lambda x: virtual_characteristic(x),
+        "MODEL_LINK": lambda x: ({"model_link": x[1]}, x[2:]),
+    }
+
+    while tokens[0] != "/end" or tokens[1] != "CHARACTERISTIC":
+        func = lexer.get(tokens[0], None)
+        if func is None:
+            print(tokens[:20])
+            raise Exception(
+                "Unknown token " + tokens[0] + " when parsing CHARACTERISTIC"
+            )
+        key_value, tokens = func(tokens)
+        for k, v in key_value.items():
+            if isinstance(v, list):
+                if k not in params:
+                    params[k] = []
+                params[k] += v
+            else:
+                params[k] = v
+
+    return char_type(name=name, description=description, **params), tokens[2:]
 
 
 def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
