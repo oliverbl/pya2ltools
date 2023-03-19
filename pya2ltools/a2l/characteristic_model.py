@@ -4,18 +4,26 @@ from dataclasses import dataclass, field
 from .model import A2LAnnotation, A2LAxisDescription, A2LCompuMethod, A2LRecordLayout
 
 @dataclass
+class VirtualMeasurement:
+    variables : list[str] = field(default_factory=list)
+
+@dataclass
 class A2LMeasurement:
     name: str = ""
     description: str = ""
     datatype: str = ""
-    symbol_name: str = ""
+    compu_method: str = ""
+    display_identifier: str = ""
     min: int = 0
     max: int = 0
     ecu_address: int = 0
+    bitmask: int = None
     format: str = ""
     matrix_dim: list[int] = field(default_factory=list)
     annotations : list[A2LAnnotation] = field(default_factory=list)
     discrete: bool = False
+    virtual : VirtualMeasurement = None
+
 
 @dataclass
 class DependentCharacteristic:

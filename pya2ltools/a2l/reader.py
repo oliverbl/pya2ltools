@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
 
-from .util import is_number
+from .util import is_number, parse_int
 from .model import (
     A2LAnnotation,
     A2LAxisDescription,
@@ -29,6 +29,7 @@ from .characteristic_model import (
     A2LMeasurement,
     DependentCharacteristic,
     VirtualCharacteristic,
+    VirtualMeasurement,
 )
 
 from .project_model import A2LHeader, A2LModule, A2LProject, A2lFile
@@ -220,70 +221,86 @@ def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "MATRIX_DIM":
         raise Exception("MATRIX_DIM expected, got " + tokens[0])
 
-    def is_number(s: str) -> bool:
-        try:
-            int(s)
-            return True
-        except ValueError:
-            return False
-
     dimensions = []
 
     tokens = tokens[1:]
     while is_number(tokens[0]):
-        dimensions.append(int(tokens[0]))
+        dimensions.append(parse_int(tokens[0]))
         tokens = tokens[1:]
 
-    return dimensions, tokens
+    return {"matrix_dim": dimensions}, tokens
+
+def parse_if_data(tokens: list[str]) -> Tuple[Any, list[str]]:
+    
+    obj, tokens = skip_type(tokens, "IF_DATA")
+    return {}, tokens
 
 
 def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
 
-    name = tokens[1]
+    
+    params = {}
+    params["name"] = tokens[1]
     description, tokens = parse_description(tokens[2:])
-    measurement = A2LMeasurement(name=name, description=description)
-    datatype = tokens[0]
-    symbol_name = tokens[1]
+    params["description"] = description
+    
+    params["datatype"] = tokens[0]
+    params["compu_method"] = tokens[1]
     # tokens[2] = ?
     # tokens[3] = ?
-    min = tokens[4]
-    max = tokens[5]
+    params["min"] = parse_int(tokens[4])
+    params["max"] = parse_int(tokens[5])
 
     tokens = tokens[6:]
 
-    while tokens[0] != "/end" or tokens[1] != "MEASUREMENT":
-        if tokens[0] == "ECU_ADDRESS":
-            ecu_address = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "FORMAT":
-            format = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "DISPLAY_IDENTIFIER":
-            display_name = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "BIT_MASK":
-            bitmask = tokens[1]
-            tokens = tokens[2:]
-        elif tokens[0] == "/begin":
-            sub = tokens[1]
-            tokens = tokens[2:]
-            while tokens[0] != "/end" or tokens[1] != sub:
-                tokens = tokens[1:]
-            tokens = tokens[2:]
-        elif tokens[0] == "MATRIX_DIM":
-            matrix_dim, tokens = parse_matrix_dim(tokens)
-        elif tokens[0] == "DISCRETE":
-            tokens = tokens[1:]
-        else:
-            print(tokens[:20])
-            raise Exception("Unknown token " + tokens[0] + " when parsing MEASUREMENT")
-
-    # TODO other parameters
-    while tokens[0] != "/end" or tokens[1] != "MEASUREMENT":
+    def virtual_measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
+        variables = []
+        while tokens[0] != "/end" or tokens[1] != "VIRTUAL":
+            variables.append(tokens[0])
+            tokens = tokens[1:]
+        return {"virtual": VirtualMeasurement(variables)}, tokens[2:]
 
+    lexer = {
+        "EXTENDED_LIMITS": lambda x: (
+            {"extended_min": parse_int(x[1]), "extended_max": parse_int(x[2])},
+            x[3:],
+        ),
+        "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
+        "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_int(x[1])}, x[2:]),
+        "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
+        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": parse_int(x[1])}, x[2:]),
+        "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
+        "/begin": lambda x: ({}, x[1:]),
+        "MATRIX_DIM": lambda x: parse_matrix_dim(x),
+        "ANNOTATION": lambda x: parse_annotation(x),
+        "ECU_ADDRESS": lambda x: ({"ecu_address": parse_int(x[1])}, x[2:]),
+        "IF_DATA": lambda x: parse_if_data(x),
+        "VIRTUAL": lambda x: virtual_measurement(x),
+    }
+
+    while tokens[0] != "/end" or tokens[1] != "MEASUREMENT":
+        func = lexer.get(tokens[0], None)
+        if func is None:
+            print(tokens[:20])
+            raise Exception(
+                "Unknown token " + tokens[0] + " when parsing MEASUREMENT"
+            )
+        key_value, tokens = func(tokens)
+        print(key_value)
+        print(tokens[:10])
+        for k, v in key_value.items():
+            if isinstance(v, list):
+                if k not in params:
+                    params[k] = []
+                params[k] += v
+            else:
+                params[k] = v
+
+    measurement = A2LMeasurement(**params)
     return measurement, tokens[2:]
 
 
@@ -322,7 +339,7 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
         else:
             print(tokens[:20])
             raise Exception("Unknown token " + tokens[0] + " when parsing ANNOTATION")
-    return A2LAnnotation(**params), tokens[2:]
+    return {"annotations": A2LAnnotation(**params)}, tokens[2:]	
 
 
 def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
@@ -345,9 +362,9 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
     params = {}
     params["measurement"] = tokens[1]
     params["compu_method"] = tokens[2]
-    params["size"] = int(tokens[3])
-    params["min"] = int(tokens[4])
-    params["max"] = int(tokens[5])
+    params["size"] = parse_int(tokens[3])
+    params["min"] = parse_int(tokens[4])
+    params["max"] = parse_int(tokens[5])
 
     tokens = tokens[6:]
 
@@ -385,7 +402,7 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
         for k, v in key_value.items():
             params[k] = v
 
-    return axis_type(**params), tokens[2:]
+    return {"axis_descriptions": [axis_type(**params)]}, tokens[2:]
 
 
 def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -422,18 +439,6 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     tokens = tokens[7:]
 
-    def local_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
-        annotation, tokens = parse_annotation(tokens)
-        return {"annotations": annotation}, tokens
-
-    def local_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
-        dimensions, tokens = parse_matrix_dim(tokens)
-        return {"matrix_dim": dimensions}, tokens
-
-    def local_axis_descr(tokens: list[str]) -> Tuple[Any, list[str]]:
-        axis_descr, tokens = parse_axis_descr(tokens)
-        return {"axis_descriptions": [axis_descr]}, tokens
-
     def dependent_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
         formula, tokens = parse_description(tokens)
@@ -456,20 +461,20 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": x[1], "extended_max": x[2]},
+            {"extended_min": parse_int(x[1]), "extended_max": parse_int(x[2])},
             x[3:],
         ),
         "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": x[1]}, x[2:]),
-        "NUMBER": lambda x: ({"size": x[1]}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_int(x[1])}, x[2:]),
+        "NUMBER": lambda x: ({"size": parse_int(x[1])}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
-        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": x[1]}, x[2:]),
+        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": parse_int(x[1])}, x[2:]),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
-        "MATRIX_DIM": lambda x: local_matrix_dim(x),
-        "AXIS_DESCR": lambda x: local_axis_descr(x),
-        "ANNOTATION": lambda x: local_annotation(x),
+        "MATRIX_DIM": lambda x: parse_matrix_dim(x),
+        "AXIS_DESCR": lambda x: parse_axis_descr(x),
+        "ANNOTATION": lambda x: parse_annotation(x),
         "DEPENDENT_CHARACTERISTIC": lambda x: dependent_characteristic(x),
         "VIRTUAL_CHARACTERISTIC": lambda x: virtual_characteristic(x),
         "MODEL_LINK": lambda x: ({"model_link": x[1]}, x[2:]),
