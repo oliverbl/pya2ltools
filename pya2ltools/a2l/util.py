@@ -21,10 +21,20 @@ def parse_number(s: str) -> int:
     except ValueError:
         return float(s)
 
-
-Lexer_Func = Callable[[list[str]], Tuple[dict, list[str]]]
+# a lexing function takes a list of tokens and returns a dictionary of str to Object and sublist of the tokens, after processing
+Lexer_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]
 
 Lexer = dict[str, Lexer_Func]
+
+
+def add_key_values(key_value: dict, params: dict) -> None:
+    for k, v in key_value.items():
+        if isinstance(v, list):
+            if k not in params:
+                params[k] = []
+            params[k] += v
+        else:
+            params[k] = v
 
 
 def parse_with_lexer(
@@ -36,11 +46,5 @@ def parse_with_lexer(
             print(tokens[:20])
             raise Exception(f"Unknown token  {tokens[0]} when parsing {name}")
         key_value, tokens = func(tokens)
-        for k, v in key_value.items():
-            if isinstance(v, list):
-                if k not in params:
-                    params[k] = []
-                params[k] += v
-            else:
-                params[k] = v
+        add_key_values(key_value, params)
     return tokens[2:]

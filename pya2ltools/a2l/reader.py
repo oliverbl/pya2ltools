@@ -11,7 +11,7 @@ from .compu_methods import (
     A2LCompuMethodVerbalTable,
 )
 
-from .util import is_number, parse_number, parse_with_lexer
+from .util import Lexer, add_key_values, is_number, parse_number, parse_with_lexer
 from .model import (
     A2LAnnotation,
     A2LAxisDescription,
@@ -44,48 +44,25 @@ from .characteristic_model import (
 from .project_model import A2LHeader, A2LModule, A2LProject, A2lFile
 
 
-# a lexing function takes a list of tokens and returns and Object and sublist of the tokens, after processing
-Lex_function = Callable[[list[str]], Tuple[Any, list[str]]]
-
-
-def assp2_version(tokens: list[str]) -> Tuple[str, list[str]]:
-    if tokens[0] != "ASAP2_VERSION":
-        raise Exception("ASAP2_VERSION expected")
-
-    major = tokens[1]
-    minor = tokens[2]
-
-    return f"{major}.{minor}", tokens[3:]
 
 
 def project(tokens: list[str]) -> A2LProject:
     if tokens[0] != "PROJECT":
         raise Exception("PROJECT expected, got " + tokens[0] + "")
 
-    project_name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    lexer: Lexer = {
+        "/begin": lambda x: ({}, x[1:]),
+        "HEADER": header,
+        "MODULE": module,
+    }
 
-    modules = []
-    _header = None
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_description(tokens[2:])
 
-    while tokens[0] != "/end" or tokens[1] != "PROJECT":
-        next = lexer.get(tokens[0], None)
-        if next is None:
-            raise Exception(f"Unknown token {tokens[0]} when parsing in project")
-
-        obj, tokens = next(tokens)
-
-        if isinstance(obj, A2LModule):
-            modules.append(obj)
-        elif isinstance(obj, A2LHeader):
-            _header = obj
-        else:
-            raise Exception(f"Unknown object {obj} when parsing in project")
-
+    tokens = parse_with_lexer(lexer=lexer, name="PROJECT", tokens=tokens, params=params)
     return (
-        A2LProject(
-            name=project_name, description=description, modules=modules, header=_header
-        ),
+        {"project": A2LProject(**params)},
         tokens[2:],
     )
 
@@ -98,47 +75,42 @@ def header(tokens: list[str]) -> list[str]:
     while tokens[0] != "/end" or tokens[1] != "HEADER":
         tokens = tokens[1:]
 
-    return A2LHeader(), tokens[2:]
+    return {"header": A2LHeader()}, tokens[2:]
 
 
 def module(tokens: list[str]) -> list[str]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
 
-    module_name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_description(tokens[2:])
 
-    module = A2LModule(name=module_name, description=description)
+    lexer: dict[str, Lex_function] = {
+        "/begin": lambda x: ({}, x[1:]),
+        "MOD_PAR": mod_par,
+        "COMPU_METHOD": compu_method,
+        "COMPU_TAB": compu_tab,
+        "COMPU_VTAB": compu_vtab,
+        "COMPU_VTAB_RANGE": compu_vtab_range,
+        "MEASUREMENT": measurement,
+        "RECORD_LAYOUT": record_layout,
+        "CHARACTERISTIC": characteristic,
+        "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
+        "FUNCTION": functools.partial(skip_type, name="FUNCTION"),
+        "GROUP": functools.partial(skip_type, name="GROUP"),
+        "TYPEDEF_CHARACTERISTIC": functools.partial(
+            skip_type, name="TYPEDEF_CHARACTERISTIC"
+        ),
+        "INSTANCE": functools.partial(skip_type, name="INSTANCE"),
+        "TYPEDEF_AXIS": functools.partial(skip_type, name="TYPEDEF_AXIS"),
+        "TYPEDEF_STRUCTURE": functools.partial(skip_type, name="TYPEDEF_STRUCTURE"),
+        "TRANSFORMER": functools.partial(skip_type, name="TRANSFORMER"),
+        "BLOB": functools.partial(skip_type, name="BLOB"),
+    }
 
-    while tokens[0] != "/end" or tokens[1] != "MODULE":
-        next = lexer.get(tokens[0], None)
-        if next is None:
-            print(tokens[:20])
-            raise Exception(f"Unknown token {tokens[0]} when parsing in module")
-
-        obj, tokens = next(tokens)
-
-        if isinstance(obj, A2LModPar):
-            module.mod_par.append(obj)
-        elif isinstance(obj, A2LCharacteristic):
-            module.characteristics.append(obj)
-        elif isinstance(obj, A2LCompuMethod):
-            module.compu_methods.append(obj)
-        elif isinstance(obj, A2LCompuTab):
-            module.compu_tabs.append(obj)
-        elif isinstance(obj, A2LMeasurement):
-            module.measurements.append(obj)
-
-    return module, tokens[2:]
-
-
-def begin(tokens: list[str]) -> list[str]:
-    func = lexer.get(tokens[1], None)
-    if func is None:
-        print(tokens[:20])
-        raise Exception(f"Unknown token {tokens[1]} when parsing /begin")
-
-    return func(tokens[1:])
+    tokens = parse_with_lexer(lexer=lexer, name="MODULE", tokens=tokens, params=params)
+    return {"modules": [A2LModule(**params)]}, tokens
 
 
 def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -148,7 +120,7 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     while tokens[0] != "/end" or tokens[1] != "MOD_PAR":
         tokens = tokens[1:]
 
-    return A2LModPar(), tokens[2:]
+    return {"mod_par": [A2LModPar()]}, tokens[2:]
 
 
 def parse_description(tokens: list[str]) -> Tuple[str, list[str]]:
@@ -244,7 +216,7 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
         }
         tokens = parse_with_lexer(lexer, "COMPU_METHOD", params, tokens)
     class_ = compu_method_types[compu_method_type]
-    return class_(**params), tokens
+    return {"compu_methods": [class_(**params)]}, tokens
 
 
 def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -259,7 +231,7 @@ def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
     params2, tokens = tab_intp(tokens[1:])
     params.update(params2)
 
-    return A2LCompuTab(**params), tokens
+    return {"compu_tabs": [A2LCompuTab(**params)]}, tokens
 
 
 def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -274,7 +246,7 @@ def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
     while tokens[0] != "/end" or tokens[1] != "COMPU_VTAB":
         tokens = tokens[1:]
 
-    return compu_vtab, tokens[2:]
+    return {"compu_vtabs": [compu_vtab]}, tokens[2:]
 
 
 def compu_vtab_range(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -289,7 +261,7 @@ def compu_vtab_range(tokens: list[str]) -> Tuple[Any, list[str]]:
     while tokens[0] != "/end" or tokens[1] != "COMPU_VTAB_RANGE":
         tokens = tokens[1:]
 
-    return compu_vtab_range, tokens[2:]
+    return {"compu_vtab_ranges": [compu_vtab_range]}, tokens[2:]
 
 
 def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -363,7 +335,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
         lexer=lexer, name="MEASUREMENT", tokens=tokens, params=params
     )
 
-    return A2LMeasurement(**params), tokens
+    return {"measurements": [A2LMeasurement(**params)]}, tokens
 
 
 def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -375,7 +347,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
     while tokens[0] != "/end" or tokens[1] != "RECORD_LAYOUT":
         tokens = tokens[1:]
 
-    return A2LRecordLayout(name=name), tokens[2:]
+    return {"record_layouts": [A2LRecordLayout(name=name)]}, tokens[2:]
 
 
 def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -455,7 +427,9 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
         "FIX_AXIS_PAR_LIST": fix_axis_par_list,
     }
 
-    tokens = parse_with_lexer(lexer=lexer, name="AXIS_DESCR", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        lexer=lexer, name="AXIS_DESCR", tokens=tokens, params=params
+    )
     return {"axis_descriptions": [axis_type(**params)]}, tokens
 
 
@@ -463,8 +437,9 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "CHARACTERISTIC":
         raise Exception("CHARACTERISTIC expected, got " + tokens[0])
 
-    name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_description(tokens[2:])
 
     characteristic_type = tokens[0]
 
@@ -483,7 +458,6 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     char_type, expected_keywords = char_types[characteristic_type]
 
-    params = {}
     params["ecu_address"] = tokens[1]
     params["record_layout"] = tokens[2]
     params["unknown"] = tokens[3]
@@ -543,7 +517,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         lexer=lexer, name="CHARACTERISTIC", tokens=tokens, params=params
     )
 
-    return char_type(name=name, description=description, **params), tokens
+    return {"characteristics": [char_type(**params)]}, tokens
 
 
 def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
@@ -555,7 +529,7 @@ def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
     while tokens[0] != "/end" or tokens[1] != name:
         tokens = tokens[1:]
 
-    return None, tokens[2:]
+    return {}, tokens[2:]
 
 
 def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -564,34 +538,6 @@ def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
 
 def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
     return skip_type(tokens, "FUNCTION")
-
-
-lexer: dict[str, Lex_function] = {
-    "ASAP2_VERSION": assp2_version,
-    "/begin": begin,
-    "PROJECT": project,
-    "HEADER": header,
-    "MODULE": module,
-    "MOD_PAR": mod_par,
-    "COMPU_METHOD": compu_method,
-    "COMPU_TAB": compu_tab,
-    "COMPU_VTAB": compu_vtab,
-    "COMPU_VTAB_RANGE": compu_vtab_range,
-    "MEASUREMENT": measurement,
-    "RECORD_LAYOUT": record_layout,
-    "CHARACTERISTIC": characteristic,
-    "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
-    "FUNCTION": functools.partial(skip_type, name="FUNCTION"),
-    "GROUP": functools.partial(skip_type, name="GROUP"),
-    "TYPEDEF_CHARACTERISTIC": functools.partial(
-        skip_type, name="TYPEDEF_CHARACTERISTIC"
-    ),
-    "INSTANCE": functools.partial(skip_type, name="INSTANCE"),
-    "TYPEDEF_AXIS": functools.partial(skip_type, name="TYPEDEF_AXIS"),
-    "TYPEDEF_STRUCTURE": functools.partial(skip_type, name="TYPEDEF_STRUCTURE"),
-    "TRANSFORMER": functools.partial(skip_type, name="TRANSFORMER"),
-    "BLOB": functools.partial(skip_type, name="BLOB"),
-}
 
 
 def file_to_tokens(path: Path) -> list[str]:
@@ -617,26 +563,34 @@ def clean_comments(tokens: list[str]) -> list[str]:
     return tokens
 
 
+def assp2_version(tokens: list[str]) -> Tuple[str, list[str]]:
+    if tokens[0] != "ASAP2_VERSION":
+        raise Exception("ASAP2_VERSION expected")
+
+    major = tokens[1]
+    minor = tokens[2]
+
+    return {"asap2_version": f"{major}.{minor}"}, tokens[3:]
+
+
 def read_a2l(path: Path) -> A2lFile:
     tokens = file_to_tokens(path)
 
     tokens = clean_comments(tokens)
 
-    project = None
-    asap2_version = None
+    lexer = {
+        "ASAP2_VERSION": assp2_version,
+        "/begin": lambda x: ({}, x[1:]),
+        "PROJECT": project,
+    }
 
+    params = {}
     while len(tokens) != 0:
         func = lexer.get(tokens[0], None)
         if func is None:
             print(tokens[:20])
             raise Exception(f"Unknown token {tokens[0]}")
-        obj, tokens = func(tokens)
+        key_value, tokens = func(tokens)
+        add_key_values(key_value, params)
 
-        if isinstance(obj, A2LProject):
-            project = obj
-        elif isinstance(obj, str):
-            asap2_version = obj
-        else:
-            raise Exception("Unknown object type")
-
-    return A2lFile(project=project, asap2_version=asap2_version)
+    return A2lFile(**params)
