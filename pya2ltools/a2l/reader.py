@@ -359,22 +359,11 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
         "VIRTUAL": lambda x: virtual_measurement(x),
     }
 
-    while tokens[0] != "/end" or tokens[1] != "MEASUREMENT":
-        func = lexer.get(tokens[0], None)
-        if func is None:
-            print(tokens[:20])
-            raise Exception("Unknown token " + tokens[0] + " when parsing MEASUREMENT")
-        key_value, tokens = func(tokens)
-        for k, v in key_value.items():
-            if isinstance(v, list):
-                if k not in params:
-                    params[k] = []
-                params[k] += v
-            else:
-                params[k] = v
+    tokens = parse_with_lexer(
+        lexer=lexer, name="MEASUREMENT", tokens=tokens, params=params
+    )
 
-    measurement = A2LMeasurement(**params)
-    return measurement, tokens[2:]
+    return A2LMeasurement(**params), tokens
 
 
 def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -466,16 +455,8 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
         "FIX_AXIS_PAR_LIST": fix_axis_par_list,
     }
 
-    while tokens[0] != "/end" or tokens[1] != "AXIS_DESCR":
-        func = lexer.get(tokens[0], None)
-        if func is None:
-            print(tokens[:20])
-            raise Exception("Unknown token " + tokens[0] + " when parsing AXIS_DESCR")
-        key_value, tokens = func(tokens)
-        for k, v in key_value.items():
-            params[k] = v
-
-    return {"axis_descriptions": [axis_type(**params)]}, tokens[2:]
+    tokens = parse_with_lexer(lexer=lexer, name="AXIS_DESCR", tokens=tokens, params=params)
+    return {"axis_descriptions": [axis_type(**params)]}, tokens
 
 
 def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -558,23 +539,11 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         "MODEL_LINK": lambda x: ({"model_link": x[1]}, x[2:]),
     }
 
-    while tokens[0] != "/end" or tokens[1] != "CHARACTERISTIC":
-        func = lexer.get(tokens[0], None)
-        if func is None:
-            print(tokens[:20])
-            raise Exception(
-                "Unknown token " + tokens[0] + " when parsing CHARACTERISTIC"
-            )
-        key_value, tokens = func(tokens)
-        for k, v in key_value.items():
-            if isinstance(v, list):
-                if k not in params:
-                    params[k] = []
-                params[k] += v
-            else:
-                params[k] = v
+    tokens = parse_with_lexer(
+        lexer=lexer, name="CHARACTERISTIC", tokens=tokens, params=params
+    )
 
-    return char_type(name=name, description=description, **params), tokens[2:]
+    return char_type(name=name, description=description, **params), tokens
 
 
 def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
