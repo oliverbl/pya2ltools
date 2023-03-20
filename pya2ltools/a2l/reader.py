@@ -2,7 +2,16 @@ from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
 
-from .util import is_number, parse_int
+from .compu_methods import (
+    A2LCompuMethodFormula,
+    A2LCompuMethodLinear,
+    A2LCompuMethodRational,
+    A2LCompuMethodTableInterpolation,
+    A2LCompuMethodTableNoInterpolation,
+    A2LCompuMethodVerbalTable,
+)
+
+from .util import is_number, parse_number, parse_with_lexer
 from .model import (
     A2LAnnotation,
     A2LAxisDescription,
@@ -104,6 +113,7 @@ def module(tokens: list[str]) -> list[str]:
     while tokens[0] != "/end" or tokens[1] != "MODULE":
         next = lexer.get(tokens[0], None)
         if next is None:
+            print(tokens[:20])
             raise Exception(f"Unknown token {tokens[0]} when parsing in module")
 
         obj, tokens = next(tokens)
@@ -142,8 +152,8 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
 
 
 def parse_description(tokens: list[str]) -> Tuple[str, list[str]]:
-    if tokens[0] == '""':
-        return "", tokens[1:]
+    if tokens[0].startswith('"') and tokens[0].endswith('"'):
+        return tokens[0], tokens[1:]
 
     description = tokens[0][1:] + " "
     tokens = tokens[1:]
@@ -157,34 +167,99 @@ def parse_description(tokens: list[str]) -> Tuple[str, list[str]]:
     return description, tokens[1:]
 
 
+def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
+    params = {}
+    if tokens[0] == "COMPU_TAB_REF":
+        params["compu_tab_ref"] = tokens[1]
+        tokens = tokens[2:]
+    else:
+        values = {}
+        size = parse_number(tokens[0])
+        tokens = tokens[1:]
+        for _ in range(size):
+            x = parse_number(tokens[0])
+            y = parse_number(tokens[1])
+            values[x] = y
+            tokens = tokens[2:]
+        params["values"] = values
+
+    if tokens[0] == "DEFAULT_VALUE_NUMERIC":
+        params["default_value"] = parse_number(tokens[1])
+        tokens = tokens[2:]
+
+    return params, tokens[2:]
+
+
 def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "COMPU_METHOD":
         raise Exception("COMPU_METHOD expected, got " + tokens[0])
 
-    name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_description(tokens[2:])
 
-    compu_method = A2LCompuMethod(name=name, description=description)
+    compu_method_types = {
+        "IDENTICAL": A2LCompuMethod,
+        "LINEAR": A2LCompuMethodLinear,
+        "RAT_FUNC": A2LCompuMethodRational,
+        "FORM": A2LCompuMethodFormula,
+        "TAB_INTP": A2LCompuMethodTableInterpolation,
+        "TAB_NOINTP": A2LCompuMethodTableNoInterpolation,
+        "TAB_VERB": A2LCompuMethodVerbalTable,
+    }
+    compu_method_type = tokens[0]
 
-    while tokens[0] != "/end" or tokens[1] != "COMPU_METHOD":
+    params["format"] = tokens[1]
+    params["unit"], tokens = parse_description(tokens[2:])
+
+    def coeffs(tokens: list[str]) -> Tuple[Any, list[str]]:
+        coeffs = []
         tokens = tokens[1:]
+        while is_number(tokens[0]):
+            coeffs.append(parse_number(tokens[0]))
+            tokens = tokens[1:]
+        return {"coeffs": coeffs}, tokens
 
-    return compu_method, tokens[2:]
+    def formula(tokens: list[str]) -> Tuple[Any, list[str]]:
+        tokens = tokens[1:]
+        formula_inv = None
+        while tokens[0] != "/end" or tokens[1] != "FORMULA":
+            if tokens[0] == "FORMULA_INV":
+                formula_inv, tokens = parse_description(tokens[1:])
+            else:
+                formula, tokens = parse_description(tokens)
+        return {"formula": formula, "formula_inv": formula_inv}, tokens[2:]
+
+    if compu_method_type == "TAB_INTP" or compu_method_type == "TAB_NOINTP":
+        params2, tokens = tab_intp(tokens)
+        params.update(params2)
+    else:
+        lexer = {
+            "COEFFS_LINEAR": coeffs,
+            "COEFFS": coeffs,
+            "STATUS_STRING_REF": lambda x: ({"status_string_ref": x[1]}, x[2:]),
+            "/begin": lambda x: ({}, x[1:]),
+            "FORMULA": formula,
+            "COMPU_TAB_REF": lambda x: ({"compu_tab_ref": x[1]}, x[2:]),
+        }
+        tokens = parse_with_lexer(lexer, "COMPU_METHOD", params, tokens)
+    class_ = compu_method_types[compu_method_type]
+    return class_(**params), tokens
 
 
 def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "COMPU_TAB":
         raise Exception("COMPU_TAB expected, got " + tokens[0])
 
-    name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_description(tokens[2:])
+    params["table_type"] = tokens[0]
 
-    compu_tab = A2LCompuTab(name=name, description=description)
+    params2, tokens = tab_intp(tokens[1:])
+    params.update(params2)
 
-    while tokens[0] != "/end" or tokens[1] != "COMPU_TAB":
-        tokens = tokens[1:]
-
-    return compu_tab, tokens[2:]
+    return A2LCompuTab(**params), tokens
 
 
 def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -225,13 +300,13 @@ def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     tokens = tokens[1:]
     while is_number(tokens[0]):
-        dimensions.append(parse_int(tokens[0]))
+        dimensions.append(parse_number(tokens[0]))
         tokens = tokens[1:]
 
     return {"matrix_dim": dimensions}, tokens
 
+
 def parse_if_data(tokens: list[str]) -> Tuple[Any, list[str]]:
-    
     obj, tokens = skip_type(tokens, "IF_DATA")
     return {}, tokens
 
@@ -240,18 +315,17 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
 
-    
     params = {}
     params["name"] = tokens[1]
     description, tokens = parse_description(tokens[2:])
     params["description"] = description
-    
+
     params["datatype"] = tokens[0]
     params["compu_method"] = tokens[1]
     # tokens[2] = ?
     # tokens[3] = ?
-    params["min"] = parse_int(tokens[4])
-    params["max"] = parse_int(tokens[5])
+    params["min"] = parse_number(tokens[4])
+    params["max"] = parse_number(tokens[5])
 
     tokens = tokens[6:]
 
@@ -265,19 +339,22 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": parse_int(x[1]), "extended_max": parse_int(x[2])},
+            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
             x[3:],
         ),
         "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": parse_int(x[1])}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
-        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": parse_int(x[1])}, x[2:]),
+        "ECU_ADDRESS_EXTENSION": lambda x: (
+            {"ecu_address_extension": parse_number(x[1])},
+            x[2:],
+        ),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
         "MATRIX_DIM": lambda x: parse_matrix_dim(x),
         "ANNOTATION": lambda x: parse_annotation(x),
-        "ECU_ADDRESS": lambda x: ({"ecu_address": parse_int(x[1])}, x[2:]),
+        "ECU_ADDRESS": lambda x: ({"ecu_address": parse_number(x[1])}, x[2:]),
         "IF_DATA": lambda x: parse_if_data(x),
         "VIRTUAL": lambda x: virtual_measurement(x),
     }
@@ -286,12 +363,8 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
         func = lexer.get(tokens[0], None)
         if func is None:
             print(tokens[:20])
-            raise Exception(
-                "Unknown token " + tokens[0] + " when parsing MEASUREMENT"
-            )
+            raise Exception("Unknown token " + tokens[0] + " when parsing MEASUREMENT")
         key_value, tokens = func(tokens)
-        print(key_value)
-        print(tokens[:10])
         for k, v in key_value.items():
             if isinstance(v, list):
                 if k not in params:
@@ -339,7 +412,7 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
         else:
             print(tokens[:20])
             raise Exception("Unknown token " + tokens[0] + " when parsing ANNOTATION")
-    return {"annotations": A2LAnnotation(**params)}, tokens[2:]	
+    return {"annotations": A2LAnnotation(**params)}, tokens[2:]
 
 
 def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
@@ -362,9 +435,9 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
     params = {}
     params["measurement"] = tokens[1]
     params["compu_method"] = tokens[2]
-    params["size"] = parse_int(tokens[3])
-    params["min"] = parse_int(tokens[4])
-    params["max"] = parse_int(tokens[5])
+    params["size"] = parse_number(tokens[3])
+    params["min"] = parse_number(tokens[4])
+    params["max"] = parse_number(tokens[5])
 
     tokens = tokens[6:]
 
@@ -457,19 +530,24 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         while tokens[0] != "/end" or tokens[1] != "VIRTUAL_CHARACTERISTIC":
             variables.append(tokens[0])
             tokens = tokens[1:]
-        return {"virtual_characteristic": VirtualCharacteristic(formula, variables)}, tokens[2:]
+        return {
+            "virtual_characteristic": VirtualCharacteristic(formula, variables)
+        }, tokens[2:]
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": parse_int(x[1]), "extended_max": parse_int(x[2])},
+            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
             x[3:],
         ),
         "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": parse_int(x[1])}, x[2:]),
-        "NUMBER": lambda x: ({"size": parse_int(x[1])}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
+        "NUMBER": lambda x: ({"size": parse_number(x[1])}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
-        "ECU_ADDRESS_EXTENSION": lambda x: ({"ecu_address_extension": parse_int(x[1])}, x[2:]),
+        "ECU_ADDRESS_EXTENSION": lambda x: (
+            {"ecu_address_extension": parse_number(x[1])},
+            x[2:],
+        ),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
         "MATRIX_DIM": lambda x: parse_matrix_dim(x),

@@ -19,8 +19,11 @@ def test_a2l():
     # for c in a2l_file.project.modules[0].characteristics:
     #     print(c)
 
-    for m in a2l_file.project.modules[0].measurements:
-        print(m)
+    # for m in a2l_file.project.modules[0].measurements:
+    #     print(m)
+
+    for compu_method in a2l_file.project.modules[0].compu_methods:
+        print(compu_method)
 
 
 def main():

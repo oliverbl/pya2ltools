@@ -1,21 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Tuple
 
+from .compu_methods import A2LCompuMethod
+
 
 @dataclass
 class A2LAnnotation:
     label: str
     origin: str
     text: str
-
-
-@dataclass
-class A2LCompuMethod:
-    name: str
-    description: str
-    format: str = ""
-    conversion_type: str = ""
-    compu_tab_ref: str = None
 
 
 @dataclass
@@ -54,7 +47,8 @@ class A2LAxisDescription:
     min: int
     max: int
     annotations: list[A2LAnnotation] = field(default_factory=list)
-    monotony : str = None
+    monotony: str = None
+
 
 @dataclass
 class A2LAxisDescriptionComAxis(A2LAxisDescription):
@@ -64,7 +58,8 @@ class A2LAxisDescriptionComAxis(A2LAxisDescription):
 @dataclass
 class A2LAxisDescriptionFixAxis(A2LAxisDescription):
     par_dist: list[int] = field(default_factory=list)
-    par_list : list[str] = field(default_factory=list)
+    par_list: list[str] = field(default_factory=list)
+
 
 @dataclass
 class A2LAxisDescriptionCurveAxis(A2LAxisDescription):
@@ -80,7 +75,9 @@ class A2LAxisDescriptionResAxis(A2LAxisDescriptionComAxis):
 class A2LCompuTab:
     name: str
     description: str
-    conversion_type: str = None
+    table_type: str = None
+    values: dict[int, int] = field(default_factory=dict)
+    default_value: float = None
 
 
 @dataclass
