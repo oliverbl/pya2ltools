@@ -440,22 +440,26 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
 
-    while tokens[0] != "/end" or tokens[1] != "ANNOTATION":
-        if tokens[0] == "ANNOTATION_LABEL":
-            params["label"], tokens = parse_string(tokens[1:])
-        elif tokens[0] == "ANNOTATION_ORIGIN":
-            params["origin"], tokens = parse_string(tokens[1:])
-        elif tokens[0] == "/begin" and tokens[1] == "ANNOTATION_TEXT":
-            params["text"] = []
-            tokens = tokens[2:]
-            while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
-                text, tokens = parse_string(tokens)
-                params["text"] = text
-            tokens = tokens[2:]
-        else:
-            print(tokens[:20])
-            raise Exception("Unknown token " + tokens[0] + " when parsing ANNOTATION")
-    return {"annotations": A2LAnnotation(**params)}, tokens[2:]
+    def parse_s(tokens: list[str], field: str) -> Tuple[dict, list[str]]:
+        val, tokens = parse_string(tokens)
+        return {field: val}, tokens
+
+    def parse_annotation_text(tokens: list[str]) -> Tuple[dict, list[str]]:
+        while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
+            text, tokens = parse_string(tokens)
+        return {"text": text}, tokens[2:]
+
+    lexer = {
+        "ANNOTATION_LABEL": lambda x: functools.partial(parse_s, field="label")(x[1:]),
+        "ANNOTATION_ORIGIN": lambda x: functools.partial(parse_s, field="origin")(x[1:]),
+        "ANNOTATION_TEXT": parse_annotation_text,
+        "/begin": lambda x: ({}, x[1:]),
+    }
+
+    tokens = parse_with_lexer(
+        lexer=lexer, name="ANNOTATION", tokens=tokens, params=params
+    )
+    return {"annotations": A2LAnnotation(**params)}, tokens
 
 
 def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
