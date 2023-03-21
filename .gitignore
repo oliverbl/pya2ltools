@@ -1,7 +1,8 @@
 docs/
 .docker/
 .devcontainer/
-test/
+test/ti/
+test/ECU_Description/
 __pycache__/
 *.txt
 *.json
