@@ -21,6 +21,7 @@ def parse_number(s: str) -> int:
     except ValueError:
         return float(s)
 
+
 # a lexing function takes a list of tokens and returns a dictionary of str to Object and sublist of the tokens, after processing
 Lexer_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]
 

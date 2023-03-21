@@ -13,24 +13,38 @@ class A2LAnnotation:
 
 @dataclass
 class A2LAxisPts:
-    size: int
+    axis: str
+    position: int
     datatype: str
-    index_increment: str
+    index_mode: str
+    addressing_mode: str
     annotations: list[A2LAnnotation] = field(default_factory=list)
 
 
 @dataclass
 class A2lNoAxisPts:
-    size: int
+    axis: str
+    position: int
     datatype: str
 
 
 @dataclass
+class A2lLRescaleAxis:
+    axis: str
+    position: int
+    datatype: str
+    map_position: int
+    index_mode: str
+    addressing_mode: str
+    annotations: list[A2LAnnotation] = field(default_factory=list)
+
+
+@dataclass
 class A2lFncValues:
-    size: int
+    position: int
     datatype: str
     index_mode: str
-    direct_or_indirect: str
+    addressing_mode: str
 
 
 @dataclass
@@ -94,6 +108,7 @@ class A2LCompuVTabRange:
     description: str
     values: dict[Tuple[int, int], str] = field(default_factory=dict)
     default_value: str = None
+
 
 @dataclass
 class A2LGroup:

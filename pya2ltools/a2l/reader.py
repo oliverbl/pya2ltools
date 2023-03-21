@@ -19,15 +19,18 @@ from .model import (
     A2LAxisDescriptionCurveAxis,
     A2LAxisDescriptionFixAxis,
     A2LAxisDescriptionResAxis,
+    A2LAxisPts,
     A2LCompuMethod,
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
     A2LModPar,
     A2LRecordLayout,
+    A2lFncValues,
+    A2lLRescaleAxis,
+    A2lNoAxisPts,
 )
 from .characteristic_model import (
-    A2LCharacteristic,
     A2LCharacteristicArray,
     A2LCharacteristicCube4,
     A2LCharacteristicCuboid,
@@ -365,12 +368,68 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "RECORD_LAYOUT":
         raise Exception("RECORD_LAYOUT expected, got " + tokens[0])
 
-    name = tokens[1]
-    tokens = tokens[1:]
-    while tokens[0] != "/end" or tokens[1] != "RECORD_LAYOUT":
-        tokens = tokens[1:]
+    params = {}
+    print(tokens[:10])
+    params["name"] = tokens[2]
+    tokens = tokens[2:]
 
-    return {"record_layouts": [A2LRecordLayout(name=name)]}, tokens[2:]
+    def fnc_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+        params = {}
+        params["position"] = parse_number(tokens[1])
+        params["datatype"] = tokens[2]
+        params["index_mode"] = tokens[3]
+        params["addressing_mode"] = tokens[4]
+        return {"fields": [A2lFncValues(**params)]}, tokens[5:]
+
+    def axis_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+        params = {}
+        params["axis"] = tokens[0]
+        params["position"] = parse_number(tokens[1])
+        params["datatype"] = tokens[2]
+        params["index_mode"] = tokens[3]
+        params["addressing_mode"] = tokens[4]
+        return {"fields": [A2LAxisPts(**params)]}, tokens[5:]
+
+    def rescale_axis(tokens: list[str]) -> Tuple[Any, list[str]]:
+        params = {}
+        params["axis"] = tokens[0]
+        params["position"] = parse_number(tokens[1])
+        params["datatype"] = tokens[2]
+        params["map_position"] = parse_number(tokens[3])
+        params["index_mode"] = tokens[4]
+        params["addressing_mode"] = tokens[5]
+        return {"fields": [A2lLRescaleAxis(**params)]}, tokens[6:]
+
+    def no_axis_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+        params = {}
+        params["axis"] = tokens[0]
+        params["position"] = parse_number(tokens[1])
+        params["datatype"] = tokens[2]
+        return {"fields": [A2lNoAxisPts(**params)]}, tokens[3:]
+
+    lexer = {
+        "FNC_VALUES": fnc_value,
+        "AXIS_PTS_X": axis_value,
+        "AXIS_PTS_Y": axis_value,
+        "AXIS_PTS_Z": axis_value,
+        "AXIS_PTS_4": axis_value,
+        "AXIS_PTS_5": axis_value,
+        "AXIS_RESCALE_X": axis_value,
+        "NO_AXIS_PTS_X": no_axis_value,
+        "NO_AXIS_PTS_Y": no_axis_value,
+        "NO_AXIS_PTS_Z": no_axis_value,
+        "NO_AXIS_PTS_4": no_axis_value,
+        "NO_AXIS_PTS_5": no_axis_value,
+        "NO_RESCALE_X": no_axis_value,
+        "RESERVED": no_axis_value,
+        "AXIS_RESCALE_X": rescale_axis,
+    }
+
+    tokens = parse_with_lexer(
+        lexer=lexer, name="RECORD_LAYOUT", tokens=tokens, params=params
+    )
+
+    return {"record_layouts": [A2LRecordLayout(**params)]}, tokens
 
 
 def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
