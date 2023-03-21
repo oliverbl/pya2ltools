@@ -11,7 +11,15 @@ from .compu_methods import (
     A2LCompuMethodVerbalTable,
 )
 
-from .util import Lexer, add_key_values, is_number, parse_number, parse_with_lexer
+from .util import (
+    Lexer,
+    add_key_values,
+    is_number,
+    parse_members,
+    parse_number,
+    parse_string,
+    parse_with_lexer,
+)
 from .model import (
     A2LAnnotation,
     A2LAxisDescription,
@@ -122,22 +130,6 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
 
     return {"mod_par": [A2LModPar()]}, tokens[2:]
-
-
-def parse_string(tokens: list[str]) -> Tuple[str, list[str]]:
-    if tokens[0].startswith('"') and tokens[0].endswith('"'):
-        return tokens[0][1:-1], tokens[1:]
-
-    description = tokens[0][1:] + " "
-    tokens = tokens[1:]
-
-    while not tokens[0].endswith('"'):
-        description += tokens[0] + " "
-        tokens = tokens[1:]
-
-    description += tokens[0][:-1]
-
-    return description, tokens[1:]
 
 
 def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -451,7 +443,9 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     lexer = {
         "ANNOTATION_LABEL": lambda x: functools.partial(parse_s, field="label")(x[1:]),
-        "ANNOTATION_ORIGIN": lambda x: functools.partial(parse_s, field="origin")(x[1:]),
+        "ANNOTATION_ORIGIN": lambda x: functools.partial(parse_s, field="origin")(
+            x[1:]
+        ),
         "ANNOTATION_TEXT": parse_annotation_text,
         "/begin": lambda x: ({}, x[1:]),
     }
