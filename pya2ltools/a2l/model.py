@@ -119,17 +119,19 @@ class A2LModCommon:
 class A2LModPar:
     pass
 
+
 @dataclass
 class A2LTransformer:
     name: str
     version: str
     name_32bit_dll: str
     name_64bit_dll: str
-    timeout_in_ms : int
+    timeout_in_ms: int
     event: str
     reverse_transformer: str | Self
     in_objects: list[str] = field(default_factory=list)
     out_objects: list[str] = field(default_factory=list)
+
 
 @dataclass
 class A2LBlob:

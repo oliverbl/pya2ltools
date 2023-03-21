@@ -37,6 +37,7 @@ class VirtualCharacteristic:
     formula: str
     variables: list[str] = field(default_factory=list)
 
+
 @dataclass
 class A2LCharacteristicTypedefInternal:
     record_layout: A2LRecordLayout
@@ -50,6 +51,7 @@ class A2LCharacteristicTypedefInternal:
     bitmask: int = None
     phys_unit: str = None
     discrete: bool = False
+
 
 @dataclass
 class A2LCharacteristicValue(A2LCharacteristicTypedefInternal):
@@ -85,6 +87,7 @@ class A2LCharacteristicCuboid(A2LCharacteristicCurve):
 class A2LCharacteristicCube4(A2LCharacteristicCurve):
     pass
 
+
 @dataclass
 class A2LCharacteristic:
     typedef: A2LCharacteristicTypedefInternal
@@ -98,8 +101,9 @@ class A2LCharacteristic:
     model_link: str = None
     matrix_dim: list[int] = None
 
+
 @dataclass
 class A2LCharacteristicTypedef:
     typedef: A2LCharacteristicTypedefInternal
-    name: str 
+    name: str
     description: str

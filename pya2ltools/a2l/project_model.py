@@ -1,7 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
-from .characteristic_model import A2LCharacteristic, A2LMeasurement, A2LCharacteristicTypedef
+from .characteristic_model import (
+    A2LCharacteristic,
+    A2LMeasurement,
+    A2LCharacteristicTypedef,
+)
 from .model import (
     A2LAxisPts,
     A2LBlob,
@@ -15,26 +19,29 @@ from .model import (
     A2LTransformer,
 )
 
+
 @dataclass
 class A2LFunction:
-    name : str
+    name: str
     description: str = ""
     ref_characteristics: list[A2LCharacteristic] = field(default_factory=list)
     def_characteristics: list[A2LCharacteristic] = field(default_factory=list)
     in_measurements: list[A2LMeasurement] = field(default_factory=list)
     out_measurements: list[A2LMeasurement] = field(default_factory=list)
     loc_measurements: list[A2LMeasurement] = field(default_factory=list)
-    sub_functions : list[Self] = field(default_factory=list)
-    version : str = None
+    sub_functions: list[Self] = field(default_factory=list)
+    version: str = None
+
 
 @dataclass
 class A2LGroup:
-    name : str
+    name: str
     description: str = ""
     characteristics: list[A2LCharacteristic] = field(default_factory=list)
     measurements: list[A2LMeasurement] = field(default_factory=list)
     sub_groups: list[Self] = field(default_factory=list)
     function_lists: list[A2LFunction] = field(default_factory=list)
+
 
 @dataclass
 class A2LModule:
@@ -52,10 +59,13 @@ class A2LModule:
     mod_common: list[A2LModCommon] = field(default_factory=list)
     mod_par: list[A2LModPar] = field(default_factory=list)
     record_layouts: list[A2LRecordLayout] = field(default_factory=list)
-    typedef_characteristics: list[A2LCharacteristicTypedef] = field(default_factory=list)
+    typedef_characteristics: list[A2LCharacteristicTypedef] = field(
+        default_factory=list
+    )
     instances: list[A2LCharacteristic] = field(default_factory=list)
     transformers: list[A2LTransformer] = field(default_factory=list)
     blobs: list[A2LBlob] = field(default_factory=list)
+
 
 @dataclass
 class A2LHeader:

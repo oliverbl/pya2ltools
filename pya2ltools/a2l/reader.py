@@ -128,6 +128,7 @@ def group(tokens: list[str]) -> Tuple[dict, list[str]]:
     tokens = parse_with_lexer(lexer=lexer, name="GROUP", tokens=tokens, params=params)
     return {"groups": [A2LGroup(**params)]}, tokens
 
+
 def transformer(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "TRANSFORMER":
         raise Exception("TRANSFORMER expected, got " + tokens[0])
@@ -144,11 +145,18 @@ def transformer(tokens: list[str]) -> Tuple[dict, list[str]]:
     tokens = tokens[3:]
     lexer = {
         "/begin": lambda x: ({}, x[1:]),
-        "TRANSFORMER_IN_OBJECTS": functools.partial(parse_members, field="in_objects", name="TRANSFORMER_IN_OBJECTS"),
-        "TRANSFORMER_OUT_OBJECTS": functools.partial(parse_members, field="out_objects", name="TRANSFORMER_OUT_OBJECTS"),
+        "TRANSFORMER_IN_OBJECTS": functools.partial(
+            parse_members, field="in_objects", name="TRANSFORMER_IN_OBJECTS"
+        ),
+        "TRANSFORMER_OUT_OBJECTS": functools.partial(
+            parse_members, field="out_objects", name="TRANSFORMER_OUT_OBJECTS"
+        ),
     }
-    tokens = parse_with_lexer(lexer=lexer, name="TRANSFORMER", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        lexer=lexer, name="TRANSFORMER", tokens=tokens, params=params
+    )
     return {"transformers": [A2LTransformer(**params)]}, tokens
+
 
 def blob(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "BLOB":
@@ -166,6 +174,7 @@ def blob(tokens: list[str]) -> Tuple[dict, list[str]]:
     }
     tokens = parse_with_lexer(lexer=lexer, name="BLOB", tokens=tokens, params=params)
     return {"blobs": [A2LBlob(**params)]}, tokens
+
 
 def module(tokens: list[str]) -> list[str]:
     if tokens[0] != "MODULE":
@@ -682,8 +691,8 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     return {"characteristics": [A2LCharacteristic(**params)]}, tokens
 
+
 def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
-    
     if tokens[0] != "TYPEDEF_CHARACTERISTIC":
         raise Exception("TYPEDEF_CHARACTERISTIC expected, got " + tokens[0])
 
@@ -746,8 +755,8 @@ def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     return {"characteristics": [A2LCharacteristicTypedef(**params)]}, tokens
 
-def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
 
+def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "INSTANCE":
         raise Exception("INSTANCE expected, got " + tokens[0])
     tokens = tokens[1:]
