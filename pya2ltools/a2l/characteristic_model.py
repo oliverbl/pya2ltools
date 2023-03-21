@@ -37,47 +37,37 @@ class VirtualCharacteristic:
     formula: str
     variables: list[str] = field(default_factory=list)
 
-
 @dataclass
-class A2LCharacteristic:
-    name: str
-    description: str
-    ecu_address: int
+class A2LCharacteristicTypedefInternal:
     record_layout: A2LRecordLayout
-    unknown: int  # TODO find out what this is
+    maxdiff: int  # TODO find out what this is
     compu_method: str | A2LCompuMethod
     min: int
     max: int
     extended_min: int = None
     extended_max: int = None
-    display_identifier: str = None
     format: str = None
     bitmask: int = None
     phys_unit: str = None
-    annotations: list[A2LAnnotation] = field(default_factory=list)
     discrete: bool = False
-    dependent_characteristic: DependentCharacteristic = None
-    virtual_characteristic: VirtualCharacteristic = None
-    model_link: str = None
-
 
 @dataclass
-class A2LCharacteristicValue(A2LCharacteristic):
+class A2LCharacteristicValue(A2LCharacteristicTypedefInternal):
     pass
 
 
 @dataclass
-class A2LCharacteristicArray(A2LCharacteristic):
+class A2LCharacteristicArray(A2LCharacteristicTypedefInternal):
     matrix_dim: list[int] = field(default_factory=list)
 
 
 @dataclass
-class A2LCharactersiticAscii(A2LCharacteristic):
+class A2LCharactersiticAscii(A2LCharacteristicTypedefInternal):
     size: int = None
 
 
 @dataclass
-class A2LCharacteristicCurve(A2LCharacteristic):
+class A2LCharacteristicCurve(A2LCharacteristicTypedefInternal):
     axis_descriptions: list[A2LAxisDescription] = field(default_factory=list)
 
 
@@ -94,3 +84,22 @@ class A2LCharacteristicCuboid(A2LCharacteristicCurve):
 @dataclass
 class A2LCharacteristicCube4(A2LCharacteristicCurve):
     pass
+
+@dataclass
+class A2LCharacteristic:
+    typedef: A2LCharacteristicTypedefInternal
+    name: str
+    description: str
+    ecu_address: int
+    display_identifier: str = None
+    annotations: list[A2LAnnotation] = field(default_factory=list)
+    dependent_characteristic: DependentCharacteristic = None
+    virtual_characteristic: VirtualCharacteristic = None
+    model_link: str = None
+    matrix_dim: list[int] = None
+
+@dataclass
+class A2LCharacteristicTypedef:
+    typedef: A2LCharacteristicTypedefInternal
+    name: str 
+    description: str

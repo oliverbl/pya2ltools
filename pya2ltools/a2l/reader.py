@@ -1,3 +1,4 @@
+from dataclasses import fields
 from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
@@ -39,11 +40,13 @@ from .model import (
     A2lNoAxisPts,
 )
 from .characteristic_model import (
+    A2LCharacteristic,
     A2LCharacteristicArray,
     A2LCharacteristicCube4,
     A2LCharacteristicCuboid,
     A2LCharacteristicCurve,
     A2LCharacteristicMap,
+    A2LCharacteristicTypedef,
     A2LCharacteristicValue,
     A2LCharactersiticAscii,
     A2LMeasurement,
@@ -145,9 +148,7 @@ def module(tokens: list[str]) -> list[str]:
         "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
         "FUNCTION": function_type,
         "GROUP": group,
-        "TYPEDEF_CHARACTERISTIC": functools.partial(
-            skip_type, name="TYPEDEF_CHARACTERISTIC"
-        ),
+        "TYPEDEF_CHARACTERISTIC": typedef_characteristic,
         "INSTANCE": functools.partial(skip_type, name="INSTANCE"),
         "TYPEDEF_AXIS": functools.partial(skip_type, name="TYPEDEF_AXIS"),
         "TYPEDEF_STRUCTURE": functools.partial(skip_type, name="TYPEDEF_STRUCTURE"),
@@ -575,12 +576,12 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     char_type, expected_keywords = char_types[characteristic_type]
 
-    params["ecu_address"] = tokens[1]
+    params["ecu_address"] = parse_number(tokens[1])
     params["record_layout"] = tokens[2]
-    params["unknown"] = tokens[3]
+    params["maxdiff"] = parse_number(tokens[3])
     params["compu_method"] = tokens[4]
-    params["min"] = tokens[5]
-    params["max"] = tokens[6]
+    params["min"] = parse_number(tokens[5])
+    params["max"] = parse_number(tokens[6])
 
     tokens = tokens[7:]
 
@@ -634,7 +635,77 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         lexer=lexer, name="CHARACTERISTIC", tokens=tokens, params=params
     )
 
-    return {"characteristics": [char_type(**params)]}, tokens
+    field_names = [field.name for field in fields(char_type)]
+    char_type_params = {k: v for k, v in params.items() if k in field_names}
+    params = {k: v for k, v in params.items() if k not in field_names}
+    params["typedef"] = char_type(**char_type_params)
+
+    return {"characteristics": [A2LCharacteristic(**params)]}, tokens
+
+def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+    
+    if tokens[0] != "TYPEDEF_CHARACTERISTIC":
+        raise Exception("TYPEDEF_CHARACTERISTIC expected, got " + tokens[0])
+
+    tokens = tokens[1:]
+
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+
+    characteristic_type = tokens[0]
+
+    char_types = {
+        "VALUE": (A2LCharacteristicValue, []),
+        "VAL_BLK": (A2LCharacteristicArray, ["MATRIX_DIM"]),
+        "ASCII": (A2LCharactersiticAscii, ["NUMBER"]),
+        "CURVE": (A2LCharacteristicCurve, ["AXIS_DESCR"]),
+        "MAP": (A2LCharacteristicMap, ["AXIS_DESCR"]),
+        "CUBOID": (A2LCharacteristicCuboid, ["AXIS_DESCR"]),
+        "CUBE_4": (A2LCharacteristicCube4, ["AXIS_DESCR"]),
+    }
+
+    if not characteristic_type in char_types:
+        raise Exception("Unknown characteristic type, got " + tokens[0])
+
+    char_type, expected_keywords = char_types[characteristic_type]
+
+    params["record_layout"] = tokens[1]
+    params["maxdiff"] = parse_number(tokens[2])
+    params["compu_method"] = tokens[3]
+    params["min"] = parse_number(tokens[4])
+    params["max"] = parse_number(tokens[5])
+
+    tokens = tokens[6:]
+
+    lexer = {
+        "EXTENDED_LIMITS": lambda x: (
+            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
+            x[3:],
+        ),
+        "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
+        "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
+        "NUMBER": lambda x: ({"size": parse_number(x[1])}, x[2:]),
+        "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
+        "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
+        "/begin": lambda x: ({}, x[1:]),
+        "MATRIX_DIM": lambda x: parse_matrix_dim(x),
+        "AXIS_DESCR": lambda x: parse_axis_descr(x),
+        "ANNOTATION": lambda x: parse_annotation(x),
+    }
+
+    tokens = parse_with_lexer(
+        lexer=lexer, name="TYPEDEF_CHARACTERISTIC", tokens=tokens, params=params
+    )
+
+    field_names = [field.name for field in fields(char_type)]
+    char_type_params = {k: v for k, v in params.items() if k in field_names}
+    params = {k: v for k, v in params.items() if k not in field_names}
+    params["typedef"] = char_type(**char_type_params)
+
+    return {"characteristics": [A2LCharacteristicTypedef(**params)]}, tokens
+
 
 
 def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
@@ -696,7 +767,7 @@ def file_to_tokens(path: Path) -> list[str]:
     with path.open("r", encoding="utf-8-sig") as f:
         lines = f.readlines()
     for line in lines:
-        temp = line.strip().split(" ")
+        temp = line.strip().split("//")[0].split(" ")
         tokens += temp
 
     empty_tokens = ["", " ", "\t", "\n"]

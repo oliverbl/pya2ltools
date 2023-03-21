@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
-from .characteristic_model import A2LCharacteristic, A2LMeasurement
+from .characteristic_model import A2LCharacteristic, A2LMeasurement, A2LCharacteristicTypedef
 from .model import (
     A2LAxisPts,
     A2LCompuMethod,
@@ -50,6 +50,7 @@ class A2LModule:
     mod_common: list[A2LModCommon] = field(default_factory=list)
     mod_par: list[A2LModPar] = field(default_factory=list)
     record_layouts: list[A2LRecordLayout] = field(default_factory=list)
+    typedef_characteristics: list[A2LCharacteristicTypedef] = field(default_factory=list)
 
 
 @dataclass
