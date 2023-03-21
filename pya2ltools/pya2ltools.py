@@ -13,9 +13,10 @@ def test_dwarf():
 
 
 def test_a2l():
-    path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171 simplified.a2l"
+    # path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171 simplified.a2l"
+    path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171_reduced.a2l"
     a2l_file = read_a2l(path)
-    # print(a2l_file)
+    print(a2l_file)
     # for c in a2l_file.project.modules[0].characteristics:
     #     print(c)
 
@@ -34,12 +35,13 @@ def test_a2l():
     # for compu_tab_range in a2l_file.project.modules[0].compu_vtab_ranges:
     #     print(compu_tab_range)
 
-    for record_layout in a2l_file.project.modules[0].record_layouts:
-        print(record_layout)
+    # for record_layout in a2l_file.project.modules[0].record_layouts:
+    #     print(record_layout)
 
 
 def main():
     test_a2l()
+    # test_dwarf()
 
 
 if __name__ == "__main__":

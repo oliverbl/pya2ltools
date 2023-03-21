@@ -111,12 +111,6 @@ class A2LCompuVTabRange:
 
 
 @dataclass
-class A2LGroup:
-    members: list[str] = field(default_factory=list)
-    annotations: list[A2LAnnotation] = field(default_factory=list)
-
-
-@dataclass
 class A2LModCommon:
     pass
 

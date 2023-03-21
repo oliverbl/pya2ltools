@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Self
 
 from .characteristic_model import A2LCharacteristic, A2LMeasurement
 from .model import (
@@ -8,12 +8,31 @@ from .model import (
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
-    A2LGroup,
     A2LModCommon,
     A2LModPar,
     A2LRecordLayout,
 )
 
+@dataclass
+class A2LFunction:
+    name : str
+    description: str = ""
+    ref_characteristics: list[A2LCharacteristic] = field(default_factory=list)
+    def_characteristics: list[A2LCharacteristic] = field(default_factory=list)
+    in_measurements: list[A2LMeasurement] = field(default_factory=list)
+    out_measurements: list[A2LMeasurement] = field(default_factory=list)
+    loc_measurements: list[A2LMeasurement] = field(default_factory=list)
+    sub_functions : list[Self] = field(default_factory=list)
+    version : str = None
+
+@dataclass
+class A2LGroup:
+    name : str
+    description: str = ""
+    characteristics: list[A2LCharacteristic] = field(default_factory=list)
+    measurements: list[A2LMeasurement] = field(default_factory=list)
+    sub_groups: list[Self] = field(default_factory=list)
+    function_lists: list[A2LFunction] = field(default_factory=list)
 
 @dataclass
 class A2LModule:
@@ -27,6 +46,7 @@ class A2LModule:
     compu_vtabs: list[A2LCompuVTab] = field(default_factory=list)
     compu_vtab_ranges: list[A2LCompuVTabRange] = field(default_factory=list)
     groups: list[A2LGroup] = field(default_factory=list)
+    functions: list[A2LFunction] = field(default_factory=list)
     mod_common: list[A2LModCommon] = field(default_factory=list)
     mod_par: list[A2LModPar] = field(default_factory=list)
     record_layouts: list[A2LRecordLayout] = field(default_factory=list)

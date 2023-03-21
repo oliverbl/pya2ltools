@@ -52,7 +52,14 @@ from .characteristic_model import (
     VirtualMeasurement,
 )
 
-from .project_model import A2LHeader, A2LModule, A2LProject, A2lFile
+from .project_model import (
+    A2LFunction,
+    A2LGroup,
+    A2LHeader,
+    A2LModule,
+    A2LProject,
+    A2lFile,
+)
 
 
 def project(tokens: list[str]) -> A2LProject:
@@ -87,6 +94,36 @@ def header(tokens: list[str]) -> list[str]:
     return {"header": A2LHeader()}, tokens[2:]
 
 
+def group(tokens: list[str]) -> Tuple[dict, list[str]]:
+    if tokens[0] != "GROUP":
+        raise Exception("GROUP expected, got " + tokens[0])
+    tokens = tokens[1:]
+
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+
+    lexer = {
+        "ROOT": lambda x: ({}, x[1:]),
+        "/begin": lambda x: ({}, x[1:]),
+        "SUB_GROUP": functools.partial(
+            parse_members, field="sub_groups", name="SUB_GROUP"
+        ),
+        "REF_CHARACTERISTIC": functools.partial(
+            parse_members, field="characteristics", name="REF_CHARACTERISTIC"
+        ),
+        "REF_MEASUREMENT": functools.partial(
+            parse_members, field="measurements", name="REF_MEASUREMENT"
+        ),
+        "FUNCTION_LIST": functools.partial(
+            parse_members, field="function_lists", name="FUNCTION_LIST"
+        ),
+    }
+
+    tokens = parse_with_lexer(lexer=lexer, name="GROUP", tokens=tokens, params=params)
+    return {"groups": [A2LGroup(**params)]}, tokens
+
+
 def module(tokens: list[str]) -> list[str]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
@@ -95,7 +132,7 @@ def module(tokens: list[str]) -> list[str]:
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
-    lexer: dict[str, Lex_function] = {
+    lexer: Lexer = {
         "/begin": lambda x: ({}, x[1:]),
         "MOD_PAR": mod_par,
         "COMPU_METHOD": compu_method,
@@ -106,8 +143,8 @@ def module(tokens: list[str]) -> list[str]:
         "RECORD_LAYOUT": record_layout,
         "CHARACTERISTIC": characteristic,
         "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
-        "FUNCTION": functools.partial(skip_type, name="FUNCTION"),
-        "GROUP": functools.partial(skip_type, name="GROUP"),
+        "FUNCTION": function_type,
+        "GROUP": group,
         "TYPEDEF_CHARACTERISTIC": functools.partial(
             skip_type, name="TYPEDEF_CHARACTERISTIC"
         ),
@@ -617,7 +654,40 @@ def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
 
 
 def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
-    return skip_type(tokens, "FUNCTION")
+    if tokens[0] != "FUNCTION":
+        raise Exception("FUNCTION expected, got " + tokens[0])
+    tokens = tokens[1:]
+
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+
+    lexer = {
+        "/begin": lambda x: ({}, x[1:]),
+        "SUB_FUNCTION": functools.partial(
+            parse_members, field="sub_functions", name="SUB_FUNCTION"
+        ),
+        "REF_CHARACTERISTIC": functools.partial(
+            parse_members, field="ref_characteristics", name="REF_CHARACTERISTIC"
+        ),
+        "DEF_CHARACTERISTIC": functools.partial(
+            parse_members, field="def_characteristics", name="DEF_CHARACTERISTIC"
+        ),
+        "IN_MEASUREMENT": functools.partial(
+            parse_members, field="in_measurements", name="IN_MEASUREMENT"
+        ),
+        "OUT_MEASUREMENT": functools.partial(
+            parse_members, field="out_measurements", name="OUT_MEASUREMENT"
+        ),
+        "LOC_MEASUREMENT": functools.partial(
+            parse_members, field="loc_measurements", name="LOC_MEASUREMENT"
+        ),
+    }
+
+    tokens = parse_with_lexer(
+        lexer=lexer, name="FUNCTION", tokens=tokens, params=params
+    )
+    return {"functions": [A2LFunction(**params)]}, tokens
 
 
 def file_to_tokens(path: Path) -> list[str]:
