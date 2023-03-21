@@ -4,6 +4,7 @@ from typing import Optional, Self
 from .characteristic_model import A2LCharacteristic, A2LMeasurement, A2LCharacteristicTypedef
 from .model import (
     A2LAxisPts,
+    A2LBlob,
     A2LCompuMethod,
     A2LCompuTab,
     A2LCompuVTab,
@@ -11,6 +12,7 @@ from .model import (
     A2LModCommon,
     A2LModPar,
     A2LRecordLayout,
+    A2LTransformer,
 )
 
 @dataclass
@@ -51,7 +53,9 @@ class A2LModule:
     mod_par: list[A2LModPar] = field(default_factory=list)
     record_layouts: list[A2LRecordLayout] = field(default_factory=list)
     typedef_characteristics: list[A2LCharacteristicTypedef] = field(default_factory=list)
-
+    instances: list[A2LCharacteristic] = field(default_factory=list)
+    transformers: list[A2LTransformer] = field(default_factory=list)
+    blobs: list[A2LBlob] = field(default_factory=list)
 
 @dataclass
 class A2LHeader:

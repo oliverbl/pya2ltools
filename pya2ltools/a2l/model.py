@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Self, Tuple
 
 from .compu_methods import A2LCompuMethod
 
@@ -118,3 +118,23 @@ class A2LModCommon:
 @dataclass
 class A2LModPar:
     pass
+
+@dataclass
+class A2LTransformer:
+    name: str
+    version: str
+    name_32bit_dll: str
+    name_64bit_dll: str
+    timeout_in_ms : int
+    event: str
+    reverse_transformer: str | Self
+    in_objects: list[str] = field(default_factory=list)
+    out_objects: list[str] = field(default_factory=list)
+
+@dataclass
+class A2LBlob:
+    name: str
+    description: str
+    ecu_address: int
+    number_of_bytes: int
+    calibration_access: str

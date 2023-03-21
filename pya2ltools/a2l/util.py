@@ -41,6 +41,7 @@ def parse_members(
     tokens: list[str], field: str, name: str
 ) -> Tuple[dict, list[str]]:
     members = []
+    tokens = tokens[1:]
     while tokens[0] != "/end" or tokens[1] != name:
         members.append(tokens[0])
         tokens = tokens[1:]
