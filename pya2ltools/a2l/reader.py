@@ -44,8 +44,6 @@ from .characteristic_model import (
 from .project_model import A2LHeader, A2LModule, A2LProject, A2lFile
 
 
-
-
 def project(tokens: list[str]) -> A2LProject:
     if tokens[0] != "PROJECT":
         raise Exception("PROJECT expected, got " + tokens[0] + "")
@@ -58,7 +56,7 @@ def project(tokens: list[str]) -> A2LProject:
     }
 
     params["name"] = tokens[1]
-    params["description"], tokens = parse_description(tokens[2:])
+    params["description"], tokens = parse_string(tokens[2:])
 
     tokens = parse_with_lexer(lexer=lexer, name="PROJECT", tokens=tokens, params=params)
     return (
@@ -84,7 +82,7 @@ def module(tokens: list[str]) -> list[str]:
 
     params = {}
     params["name"] = tokens[1]
-    params["description"], tokens = parse_description(tokens[2:])
+    params["description"], tokens = parse_string(tokens[2:])
 
     lexer: dict[str, Lex_function] = {
         "/begin": lambda x: ({}, x[1:]),
@@ -123,9 +121,9 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"mod_par": [A2LModPar()]}, tokens[2:]
 
 
-def parse_description(tokens: list[str]) -> Tuple[str, list[str]]:
+def parse_string(tokens: list[str]) -> Tuple[str, list[str]]:
     if tokens[0].startswith('"') and tokens[0].endswith('"'):
-        return tokens[0], tokens[1:]
+        return tokens[0][1:-1], tokens[1:]
 
     description = tokens[0][1:] + " "
     tokens = tokens[1:]
@@ -168,7 +166,7 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
     params["name"] = tokens[1]
-    params["description"], tokens = parse_description(tokens[2:])
+    params["description"], tokens = parse_string(tokens[2:])
 
     compu_method_types = {
         "IDENTICAL": A2LCompuMethod,
@@ -182,7 +180,7 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     compu_method_type = tokens[0]
 
     params["format"] = tokens[1]
-    params["unit"], tokens = parse_description(tokens[2:])
+    params["unit"], tokens = parse_string(tokens[2:])
 
     def coeffs(tokens: list[str]) -> Tuple[Any, list[str]]:
         coeffs = []
@@ -197,9 +195,9 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
         formula_inv = None
         while tokens[0] != "/end" or tokens[1] != "FORMULA":
             if tokens[0] == "FORMULA_INV":
-                formula_inv, tokens = parse_description(tokens[1:])
+                formula_inv, tokens = parse_string(tokens[1:])
             else:
-                formula, tokens = parse_description(tokens)
+                formula, tokens = parse_string(tokens)
         return {"formula": formula, "formula_inv": formula_inv}, tokens[2:]
 
     if compu_method_type == "TAB_INTP" or compu_method_type == "TAB_NOINTP":
@@ -225,7 +223,7 @@ def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
     params["name"] = tokens[1]
-    params["description"], tokens = parse_description(tokens[2:])
+    params["description"], tokens = parse_string(tokens[2:])
     params["table_type"] = tokens[0]
 
     params2, tokens = tab_intp(tokens[1:])
@@ -238,30 +236,55 @@ def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "COMPU_VTAB":
         raise Exception("COMPU_VTAB expected, got " + tokens[0])
 
-    name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_string(tokens[2:])
 
-    compu_vtab = A2LCompuVTab(name=name, description=description)
+    if tokens[0] != "TAB_VERB":
+        raise Exception("TAB_VERB expected, got " + tokens[0])
 
-    while tokens[0] != "/end" or tokens[1] != "COMPU_VTAB":
-        tokens = tokens[1:]
+    tokens = tokens[1:]
+    size = parse_number(tokens[0])
+    tokens = tokens[1:]
+    values = {}
+    for _ in range(size):
+        val = parse_number(tokens[0])
+        name, tokens = parse_string(tokens[1:])
+        values[val] = name
+    params["values"] = values
 
-    return {"compu_vtabs": [compu_vtab]}, tokens[2:]
+    if tokens[0] == "DEFAULT_VALUE":
+        params["default_value"], tokens = parse_string(tokens[1:])
+
+    assert tokens[0] == "/end", "Expected /end, got " + tokens[0]
+
+    return {"compu_vtabs": [A2LCompuVTab(**params)]}, tokens[2:]
 
 
 def compu_vtab_range(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "COMPU_VTAB_RANGE":
         raise Exception("COMPU_VTAB_RANGE expected, got " + tokens[0])
 
-    name = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    params = {}
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_string(tokens[2:])
 
-    compu_vtab_range = A2LCompuVTabRange(name=name, description=description)
+    size = parse_number(tokens[0])
+    tokens = tokens[1:]
+    values = {}
+    for _ in range(size):
+        min = parse_number(tokens[0])
+        max = parse_number(tokens[1])
+        name, tokens = parse_string(tokens[2:])
+        values[(min, max)] = name
+    params["values"] = values
 
-    while tokens[0] != "/end" or tokens[1] != "COMPU_VTAB_RANGE":
-        tokens = tokens[1:]
+    if tokens[0] == "DEFAULT_VALUE":
+        params["default_value"], tokens = parse_string(tokens[1:])
 
-    return {"compu_vtab_ranges": [compu_vtab_range]}, tokens[2:]
+    assert tokens[0] == "/end", "Expected /end, got " + tokens[0]
+
+    return {"compu_vtab_ranges": [A2LCompuVTabRange(**params)]}, tokens[2:]
 
 
 def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -289,7 +312,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
     params["name"] = tokens[1]
-    description, tokens = parse_description(tokens[2:])
+    description, tokens = parse_string(tokens[2:])
     params["description"] = description
 
     params["datatype"] = tokens[0]
@@ -360,14 +383,14 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     while tokens[0] != "/end" or tokens[1] != "ANNOTATION":
         if tokens[0] == "ANNOTATION_LABEL":
-            params["label"], tokens = parse_description(tokens[1:])
+            params["label"], tokens = parse_string(tokens[1:])
         elif tokens[0] == "ANNOTATION_ORIGIN":
-            params["origin"], tokens = parse_description(tokens[1:])
+            params["origin"], tokens = parse_string(tokens[1:])
         elif tokens[0] == "/begin" and tokens[1] == "ANNOTATION_TEXT":
             params["text"] = []
             tokens = tokens[2:]
             while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
-                text, tokens = parse_description(tokens)
+                text, tokens = parse_string(tokens)
                 params["text"] = text
             tokens = tokens[2:]
         else:
@@ -439,7 +462,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
     params["name"] = tokens[1]
-    params["description"], tokens = parse_description(tokens[2:])
+    params["description"], tokens = parse_string(tokens[2:])
 
     characteristic_type = tokens[0]
 
@@ -469,7 +492,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     def dependent_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
-        formula, tokens = parse_description(tokens)
+        formula, tokens = parse_string(tokens)
         variables = []
         while tokens[0] != "/end" or tokens[1] != "DEPENDENT_CHARACTERISTIC":
             variables.append(tokens[0])
@@ -480,7 +503,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     def virtual_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
-        formula, tokens = parse_description(tokens)
+        formula, tokens = parse_string(tokens)
         variables = []
         while tokens[0] != "/end" or tokens[1] != "VIRTUAL_CHARACTERISTIC":
             variables.append(tokens[0])

@@ -84,15 +84,16 @@ class A2LCompuTab:
 class A2LCompuVTab:
     name: str
     description: str
-    fields: dict[int, str] = field(default_factory=dict)
+    values: dict[int, str] = field(default_factory=dict)
+    default_value: str = None
 
 
 @dataclass
 class A2LCompuVTabRange:
     name: str
     description: str
-    fields: dict[Tuple[int, int], str] = field(default_factory=dict)
-
+    values: dict[Tuple[int, int], str] = field(default_factory=dict)
+    default_value: str = None
 
 @dataclass
 class A2LGroup:
