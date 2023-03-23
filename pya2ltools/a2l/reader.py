@@ -36,6 +36,7 @@ from .model import (
     A2LCompuVTab,
     A2LCompuVTabRange,
     A2LInstance,
+    A2LModCommon,
     A2LRecordLayout,
     A2LStructure,
     A2LStructureComponent,
@@ -43,6 +44,7 @@ from .model import (
     A2lFncValues,
     A2lLRescaleAxis,
     A2lNoAxisPts,
+    ByteOrder,
 )
 from .characteristic_model import (
     A2LCharacteristic,
@@ -70,8 +72,6 @@ from .project_model import (
 )
 from .mod_par_model import (
     A2LIfData,
-    A2LIfDataPage,
-    A2LIfDataSegment,
     A2LMemorySegment,
     A2LModPar,
 )
@@ -101,12 +101,18 @@ def project(tokens: list[str]) -> Tuple[dict, list[str]]:
 def header(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "HEADER":
         raise Exception("HEADER expected")
-
-    # ignore header for now, skip until / end
-    while tokens[0] != "/end" or tokens[1] != "HEADER":
-        tokens = tokens[1:]
-
-    return {"header": A2LHeader()}, tokens[2:]
+    tokens = tokens[1:]
+    params = {}
+    params["description"], tokens = parse_string(tokens)
+    def version(tokens: list[str]) -> Tuple[dict, list[str]]:
+        version, tokens = parse_string(tokens)
+        return {"version": version}, tokens
+    lexer: Lexer = {
+        "VERSION": version,
+        "PROJECT_NO": lambda x: ({"project_number": x[1]}, x[2:]),
+    }
+    tokens = parse_with_lexer(lexer=lexer, name="HEADER", tokens=tokens, params=params)
+    return {"header": A2LHeader(**params)}, tokens
 
 
 def group(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -207,7 +213,6 @@ def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
             params.update(params2)
         else:
             tokens = tokens[3:]
-        print(params)
         return {"components": [A2LStructureComponent(**params)]}, tokens[2:]
 
     lexer = {
@@ -231,6 +236,8 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     lexer: Lexer = {
         "/begin": lambda x: ({}, x[1:]),
         "MOD_PAR": mod_par,
+        "MOD_COMMON": mod_common,
+        "IF_DATA": if_data,
         "COMPU_METHOD": compu_method,
         "COMPU_TAB": compu_tab,
         "COMPU_VTAB": compu_vtab,
@@ -253,24 +260,6 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"modules": [A2LModule(**params)]}, tokens
 
 
-def page(tokens: list[str]) -> Tuple[Any, list[str]]:
-    if tokens[0] != "PAGE":
-        raise Exception("PAGE expected, got " + tokens[0])
-    tokens = tokens[1:]
-
-    params = {}
-    params["number"] = tokens[0]
-    modifier, tokens = parse_members(tokens[1:], "modifier", "PAGE")
-    params.update(modifier)
-    return {"pages": [A2LIfDataPage(**params)]}, tokens
-
-
-def segment(tokens: list[str]) -> Tuple[Any, list[str]]:
-    params = {}
-    params["offsets"], tokens = parse_list_of_numbers(tokens[1:])
-    lexer = {"/begin": lambda x: ({}, x[1:]), "PAGE": page}
-    tokens = parse_with_lexer(lexer=lexer, name="SEGMENT", tokens=tokens, params=params)
-    return {"segments": [A2LIfDataSegment(**params)]}, tokens
 
 
 def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -281,12 +270,12 @@ def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
     params = {}
     params["name"] = tokens[0]
     tokens = tokens[1:]
-    lexer = {
-        "/begin": lambda x: ({}, x[1:]),
-        "SEGMENT": segment,
-    }
-    tokens = parse_with_lexer(lexer=lexer, name="IF_DATA", tokens=tokens, params=params)
-    return {"if_data": [A2LIfData(**params)]}, tokens
+    params["content"] = []
+    while tokens[0] != "/end" or tokens[1] != "IF_DATA":
+        params["content"].append(tokens[0])
+        tokens = tokens[1:]
+
+    return {"if_data": [A2LIfData(**params)]}, tokens[2:]
 
 
 def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -332,6 +321,26 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     tokens = parse_with_lexer(lexer=lexer, name="MOD_PAR", tokens=tokens, params=params)
 
     return {"mod_par": [A2LModPar(**params)]}, tokens
+
+def mod_common(tokens: list[str]) -> Tuple[dict, list[str]]:
+    
+    if tokens[0] != "MOD_COMMON":
+        raise Exception("MOD_COMMON expected")
+    tokens = tokens[1:]
+
+    params = {}
+    params["description"], tokens = parse_string(tokens)
+    lexer = {
+        "DEPOSIT": lambda x: ({"deposit": x[1]}, x[2:]),
+        "BYTE_ORDER": lambda x: ({"byte_order": ByteOrder(x[1])}, x[2:]),
+        "ALIGNMENT_BYTE": lambda x: ({"alignment_byte": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_WORD": lambda x: ({"alignment_word": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_LONG": lambda x: ({"alignment_long": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_FLOAT32_IEEE": lambda x: ({"alignment_float32_ieee": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_FLOAT64_IEEE": lambda x: ({"alignment_float64_ieee": parse_number(x[1])}, x[2:]),
+    }
+    tokens = parse_with_lexer(lexer=lexer, name="MOD_COMMON", tokens=tokens, params=params)
+    return {"mod_common": [A2LModCommon(**params)]}, tokens
 
 
 def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -564,7 +573,6 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         raise Exception("RECORD_LAYOUT expected, got " + tokens[0])
 
     params = {}
-    print(tokens[:10])
     params["name"] = tokens[2]
     tokens = tokens[2:]
 

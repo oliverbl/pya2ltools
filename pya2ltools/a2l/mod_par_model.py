@@ -3,19 +3,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 @dataclass
-class A2LIfDataPage:
-    number: int
-    modifier: list[str] = field(default_factory=list)
-
-@dataclass
-class A2LIfDataSegment:
-    offsets: list[int] = field(default_factory=list)
-    pages: list[A2LIfDataPage] = field(default_factory=list)
-
-@dataclass
 class A2LIfData:
     name: str
-    segments: list[A2LIfDataSegment] = field(default_factory=list)
+    content: str
 
 @dataclass
 class A2LMemorySegment:

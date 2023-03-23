@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import enum
 from typing import Self, Tuple
 
 from .compu_methods import A2LCompuMethod
@@ -110,9 +111,22 @@ class A2LCompuVTabRange:
     default_value: str | None = None
 
 
+class ByteOrder(enum.Enum):
+    MSB_LAST = "MSB_LAST"
+    MSB_FIRST = "MSB_FIRST"
+
 @dataclass
 class A2LModCommon:
-    pass
+    description : str
+    deposit : str
+    byte_order: ByteOrder | None = None
+    alignment_byte: int | None = None 
+    alignment_word: int | None = None
+    alignment_long: int | None = None
+    alignment_int64: int | None = None
+    alignment_float32_ieee: int | None = None
+    alignment_float64_ieee: int | None = None
+
 
 
 

@@ -33,7 +33,7 @@ class A2LFunction:
     out_measurements: list[A2LMeasurement] = field(default_factory=list)
     loc_measurements: list[A2LMeasurement] = field(default_factory=list)
     sub_functions: list[Self] = field(default_factory=list)
-    version: str = None
+    version: str | None = None
 
 
 @dataclass
@@ -73,7 +73,9 @@ class A2LModule:
 
 @dataclass
 class A2LHeader:
-    pass
+    description: str
+    project_number: str
+    version: str
 
 
 @dataclass
@@ -86,6 +88,6 @@ class A2LProject:
 
 @dataclass
 class A2lFile:
-    project: A2LProject = None
+    project: A2LProject
     asap2_version: str = ""
     a2ml_version: str = ""
