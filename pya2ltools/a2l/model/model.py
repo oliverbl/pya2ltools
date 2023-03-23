@@ -4,6 +4,7 @@ from typing import Self, Tuple
 
 from .compu_methods import A2LCompuMethod
 
+
 @dataclass
 class A2LAnnotation:
     label: str
@@ -50,7 +51,9 @@ class A2lFncValues:
 @dataclass
 class A2LRecordLayout:
     name: str = ""
-    fields: list[A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues] = field(default_factory=list)
+    fields: list[
+        A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues
+    ] = field(default_factory=list)
 
 
 @dataclass
@@ -114,20 +117,18 @@ class ByteOrder(enum.Enum):
     MSB_LAST = "MSB_LAST"
     MSB_FIRST = "MSB_FIRST"
 
+
 @dataclass
 class A2LModCommon:
-    description : str
-    deposit : str
+    description: str
+    deposit: str
     byte_order: ByteOrder | None = None
-    alignment_byte: int | None = None 
+    alignment_byte: int | None = None
     alignment_word: int | None = None
     alignment_long: int | None = None
     alignment_int64: int | None = None
     alignment_float32_ieee: int | None = None
     alignment_float64_ieee: int | None = None
-
-
-
 
 
 @dataclass
@@ -157,7 +158,7 @@ class A2LStructureComponent:
     name: str
     datatype: str
     offset: int
-    matrix_dim : list[int] | None = None
+    matrix_dim: list[int] | None = None
 
 
 @dataclass
@@ -167,14 +168,16 @@ class A2LStructure:
     description: str
     components: list[A2LStructureComponent] = field(default_factory=list)
 
+
 @dataclass
 class A2LInstance:
     name: str
     description: str
     reference: str
     ecu_address: int
-    matrix_dim : list[int] | None = None
+    matrix_dim: list[int] | None = None
     display_identifier: str | None = None
+
 
 @dataclass
 class A2LAxisPts:
@@ -185,10 +188,11 @@ class A2LAxisPts:
     record_layout: str
     offset: int
     compu_method: str
-    max_number_sample_points : int
+    max_number_sample_points: int
     min: int
     max: int
     display_identifier: str | None = None
+
 
 @dataclass
 class A2LTypedefAxis:

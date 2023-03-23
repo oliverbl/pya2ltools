@@ -915,18 +915,6 @@ def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"instances": [A2LInstance(**params)]}, tokens
 
 
-def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
-    if tokens[0] != name:
-        raise Exception(f"{name} expected, got " + tokens[0])
-
-    tokens = tokens[1:]
-
-    while tokens[0] != "/end" or tokens[1] != name:
-        tokens = tokens[1:]
-
-    return {}, tokens[2:]
-
-
 def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "AXIS_PTS":
         raise Exception("AXIS_PTS expected, got " + tokens[0])
@@ -991,15 +979,6 @@ def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"functions": [A2LFunction(**params)]}, tokens
 
 
-# def clean_comments(tokens: list[str]) -> list[str]:
-#     while "/*" in tokens:
-#         start = tokens.index("/*")
-#         end = tokens.index("*/")
-#         tokens = tokens[:start] + tokens[end + 1 :]
-
-#     return tokens
-
-
 def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "ASAP2_VERSION":
         raise Exception("ASAP2_VERSION expected")
@@ -1012,7 +991,6 @@ def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
 
 def read_a2l(path: Path) -> A2lFile:
     tokens = Tokens.from_file(path)
-    # tokens = clean_comments(tokens)
 
     lexer = {
         "ASAP2_VERSION": assp2_version,

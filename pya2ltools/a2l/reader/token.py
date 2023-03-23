@@ -9,14 +9,6 @@ class Tokens:
         self._index = 0
 
     @staticmethod
-    def clean_comments(tokens: list[str]) -> list[str]:
-        while "/*" in tokens:
-            start = tokens.index("/*")
-            end = tokens.index("*/")
-            tokens = tokens[:start] + tokens[end + 1 :]
-        return tokens
-
-    @staticmethod
     def from_file(path: str) -> Self:
         tokens = []
         with path.open("r", encoding="utf-8-sig") as f:
