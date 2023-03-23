@@ -15,6 +15,7 @@ def test_dwarf():
 def test_a2l():
     path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171 simplified.a2l"
     # path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171_reduced.a2l"
+    # path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171.a2l"
     a2l_file = read_a2l(path)
     print(a2l_file)
     # for c in a2l_file.project.modules[0].characteristics:

@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from .mod_par_model import A2LIfData
+
 from .model import A2LAnnotation, A2LAxisDescription, A2LCompuMethod, A2LRecordLayout
 
 
@@ -24,6 +26,7 @@ class A2LMeasurement:
     annotations: list[A2LAnnotation] = field(default_factory=list)
     discrete: bool = False
     virtual: VirtualMeasurement | None = None
+    if_data: list[A2LIfData] = field(default_factory=list)
 
 
 @dataclass

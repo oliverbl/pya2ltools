@@ -20,6 +20,7 @@ from .model import (
     A2LRecordLayout,
     A2LStructure,
     A2LTransformer,
+    A2LTypedefAxis,
 )
 
 
@@ -66,6 +67,7 @@ class A2LModule:
         default_factory=list
     )
     typedef_structures: list[A2LStructure] = field(default_factory=list)
+    typedef_axes: list[A2LTypedefAxis] = field(default_factory=list)
     instances: list[A2LInstance] = field(default_factory=list)
     transformers: list[A2LTransformer] = field(default_factory=list)
     blobs: list[A2LBlob] = field(default_factory=list)

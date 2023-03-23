@@ -65,6 +65,10 @@ def add_key_values(key_value: dict, params: dict) -> None:
             if k not in params:
                 params[k] = []
             params[k] += v
+        elif isinstance(v, dict):
+            if k not in params:
+                params[k] = {}
+            params[k].update(v)
         else:
             params[k] = v
 

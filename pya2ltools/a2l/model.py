@@ -13,7 +13,7 @@ class A2LAnnotation:
 
 
 @dataclass
-class A2LAxisPts:
+class A2LRecordLayoutAxisPts:
     axis: str
     position: int
     datatype: str
@@ -23,7 +23,7 @@ class A2LAxisPts:
 
 
 @dataclass
-class A2lNoAxisPts:
+class A2LRecordLayoutNoAxisPts:
     axis: str
     position: int
     datatype: str
@@ -51,7 +51,7 @@ class A2lFncValues:
 @dataclass
 class A2LRecordLayout:
     name: str = ""
-    fields: list[A2lNoAxisPts | A2LAxisPts | A2lFncValues] = field(default_factory=list)
+    fields: list[A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues] = field(default_factory=list)
 
 
 @dataclass
@@ -176,3 +176,29 @@ class A2LInstance:
     ecu_address: int
     matrix_dim : list[int] | None = None
     display_identifier: str | None = None
+
+@dataclass
+class A2LAxisPts:
+    name: str
+    description: str
+    ecu_address: int
+    measurement: str
+    record_layout: str
+    offset: int
+    compu_method: str
+    max_number_sample_points : int
+    min: int
+    max: int
+    display_identifier: str | None = None
+
+@dataclass
+class A2LTypedefAxis:
+    name: str
+    description: str
+    measurement: str
+    record_layout: str
+    max_diff: float
+    compu_method: str
+    max_number_of_axis_points: int
+    lower_limit: int
+    upper_limit: int

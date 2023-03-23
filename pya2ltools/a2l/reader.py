@@ -38,12 +38,14 @@ from .model import (
     A2LInstance,
     A2LModCommon,
     A2LRecordLayout,
+    A2LRecordLayoutAxisPts,
+    A2LRecordLayoutNoAxisPts,
     A2LStructure,
     A2LStructureComponent,
     A2LTransformer,
+    A2LTypedefAxis,
     A2lFncValues,
     A2lLRescaleAxis,
-    A2lNoAxisPts,
     ByteOrder,
 )
 from .characteristic_model import (
@@ -104,9 +106,11 @@ def header(tokens: list[str]) -> Tuple[dict, list[str]]:
     tokens = tokens[1:]
     params = {}
     params["description"], tokens = parse_string(tokens)
+
     def version(tokens: list[str]) -> Tuple[dict, list[str]]:
         version, tokens = parse_string(tokens)
         return {"version": version}, tokens
+
     lexer: Lexer = {
         "VERSION": version,
         "PROJECT_NO": lambda x: ({"project_number": x[1]}, x[2:]),
@@ -225,6 +229,24 @@ def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"typedef_structures": [A2LStructure(**params)]}, tokens
 
 
+def typedef_axis(tokens: list[str]) -> Tuple[dict, list[str]]:
+    if tokens[0] != "TYPEDEF_AXIS":
+        raise Exception("TYPEDEF_AXIS expected, got " + tokens[0])
+    tokens = tokens[1:]
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+    params["measurement"] = tokens[0]
+    params["record_layout"] = tokens[1]
+    params["max_diff"] = parse_number(tokens[2])
+    params["compu_method"] = tokens[3]
+    params["max_number_of_axis_points"] = parse_number(tokens[4])
+    params["lower_limit"] = parse_number(tokens[5])
+    params["upper_limit"] = parse_number(tokens[6])
+    tokens = tokens[9:]
+    return {"typedef_axes": [A2LTypedefAxis(**params)]}, tokens
+
+
 def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
@@ -249,8 +271,8 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
         "GROUP": group,
         "TYPEDEF_CHARACTERISTIC": typedef_characteristic,
         "INSTANCE": instance,
-        "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
-        "TYPEDEF_AXIS": functools.partial(skip_type, name="TYPEDEF_AXIS"),
+        "AXIS_PTS": axis_pts,
+        "TYPEDEF_AXIS": typedef_axis,
         "TYPEDEF_STRUCTURE": typedef_structure,
         "TRANSFORMER": transformer,
         "BLOB": blob,
@@ -258,8 +280,6 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
 
     tokens = parse_with_lexer(lexer=lexer, name="MODULE", tokens=tokens, params=params)
     return {"modules": [A2LModule(**params)]}, tokens
-
-
 
 
 def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -293,7 +313,6 @@ def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
     tokens = parse_with_lexer(
         lexer=lexer, name="MEMORY_SEGMENT", tokens=tokens, params=params
     )
-
     return {"memory_segments": [A2LMemorySegment(**params)]}, tokens
 
 
@@ -305,8 +324,8 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     params["description"], tokens = parse_string(tokens[1:])
 
     def system_constant(tokens: list[str]) -> Tuple[dict, list[str]]:
-        name = tokens[1]
-        val, tokens = parse_string(tokens[2:])
+        name, tokens = parse_string(tokens[1:])
+        val, tokens = parse_string(tokens)
         return {"system_constants": {name: val}}, tokens
 
     lexer = {
@@ -322,8 +341,8 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     return {"mod_par": [A2LModPar(**params)]}, tokens
 
+
 def mod_common(tokens: list[str]) -> Tuple[dict, list[str]]:
-    
     if tokens[0] != "MOD_COMMON":
         raise Exception("MOD_COMMON expected")
     tokens = tokens[1:]
@@ -336,10 +355,18 @@ def mod_common(tokens: list[str]) -> Tuple[dict, list[str]]:
         "ALIGNMENT_BYTE": lambda x: ({"alignment_byte": parse_number(x[1])}, x[2:]),
         "ALIGNMENT_WORD": lambda x: ({"alignment_word": parse_number(x[1])}, x[2:]),
         "ALIGNMENT_LONG": lambda x: ({"alignment_long": parse_number(x[1])}, x[2:]),
-        "ALIGNMENT_FLOAT32_IEEE": lambda x: ({"alignment_float32_ieee": parse_number(x[1])}, x[2:]),
-        "ALIGNMENT_FLOAT64_IEEE": lambda x: ({"alignment_float64_ieee": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_FLOAT32_IEEE": lambda x: (
+            {"alignment_float32_ieee": parse_number(x[1])},
+            x[2:],
+        ),
+        "ALIGNMENT_FLOAT64_IEEE": lambda x: (
+            {"alignment_float64_ieee": parse_number(x[1])},
+            x[2:],
+        ),
     }
-    tokens = parse_with_lexer(lexer=lexer, name="MOD_COMMON", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        lexer=lexer, name="MOD_COMMON", tokens=tokens, params=params
+    )
     return {"mod_common": [A2LModCommon(**params)]}, tokens
 
 
@@ -508,11 +535,6 @@ def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"matrix_dim": dimensions}, tokens
 
 
-def parse_if_data(tokens: list[str]) -> Tuple[Any, list[str]]:
-    obj, tokens = skip_type(tokens, "IF_DATA")
-    return {}, tokens
-
-
 def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
@@ -557,7 +579,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
         "MATRIX_DIM": lambda x: parse_matrix_dim(x),
         "ANNOTATION": lambda x: parse_annotation(x),
         "ECU_ADDRESS": lambda x: ({"ecu_address": parse_number(x[1])}, x[2:]),
-        "IF_DATA": lambda x: parse_if_data(x),
+        "IF_DATA": if_data,
         "VIRTUAL": lambda x: virtual_measurement(x),
     }
 
@@ -591,7 +613,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         params["datatype"] = tokens[2]
         params["index_mode"] = tokens[3]
         params["addressing_mode"] = tokens[4]
-        return {"fields": [A2LAxisPts(**params)]}, tokens[5:]
+        return {"fields": [A2LRecordLayoutAxisPts(**params)]}, tokens[5:]
 
     def rescale_axis(tokens: list[str]) -> Tuple[Any, list[str]]:
         params = {}
@@ -608,7 +630,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens[1])
         params["datatype"] = tokens[2]
-        return {"fields": [A2lNoAxisPts(**params)]}, tokens[3:]
+        return {"fields": [A2LRecordLayoutNoAxisPts(**params)]}, tokens[3:]
 
     lexer = {
         "FNC_VALUES": fnc_value,
@@ -695,20 +717,12 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
     tokens = tokens[6:]
 
     def fix_axis_par_dist(tokens: list[str]) -> Tuple[Any, list[str]]:
-        numbers = []
-        tokens = tokens[1:]
-        while is_number(tokens[0]):
-            numbers.append(int(tokens[0]))
-            tokens = tokens[1:]
+        numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_dist": numbers}, tokens
 
     def fix_axis_par_list(tokens: list[str]) -> Tuple[Any, list[str]]:
-        numbers = []
-        tokens = tokens[1:]
-        while is_number(tokens[0]):
-            numbers.append(int(tokens[0]))
-            tokens = tokens[1:]
-        return {"par_dist": numbers}, tokens[2:]
+        numbers, tokens = parse_list_of_numbers(tokens[1:])
+        return {"par_list": numbers}, tokens[2:]
 
     lexer = {
         "AXIS_PTS_REF": lambda x: ({"axis_pts_ref": x[1]}, x[2:]),
@@ -915,7 +929,30 @@ def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
 
 
 def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
-    return skip_type(tokens, "AXIS_PTS")
+    if tokens[0] != "AXIS_PTS":
+        raise Exception("AXIS_PTS expected, got " + tokens[0])
+
+    tokens = tokens[1:]
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+    params["ecu_address"] = parse_number(tokens[0])
+    params["measurement"] = tokens[1]
+    params["record_layout"] = tokens[2]
+    params["offset"] = parse_number(tokens[3])
+    params["compu_method"] = tokens[4]
+    params["max_number_sample_points"] = parse_number(tokens[5])
+    params["min"] = parse_number(tokens[6])
+    params["max"] = parse_number(tokens[7])
+    tokens = tokens[8:]
+
+    lexer = {
+        "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
+    }
+    tokens = parse_with_lexer(
+        lexer=lexer, name="AXIS_PTS", tokens=tokens, params=params
+    )
+    return {"axis_pts": [A2LAxisPts(**params)]}, tokens
 
 
 def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
