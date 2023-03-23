@@ -61,7 +61,7 @@ class A2LAxisDescription:
     min: int
     max: int
     annotations: list[A2LAnnotation] = field(default_factory=list)
-    monotony: str = None
+    monotony: str | None = None
 
 
 @dataclass
@@ -89,9 +89,9 @@ class A2LAxisDescriptionResAxis(A2LAxisDescriptionComAxis):
 class A2LCompuTab:
     name: str
     description: str
-    table_type: str = None
+    table_type: str | None = None
     values: dict[int, int] = field(default_factory=dict)
-    default_value: float = None
+    default_value: float | None = None
 
 
 @dataclass
@@ -99,7 +99,7 @@ class A2LCompuVTab:
     name: str
     description: str
     values: dict[int, str] = field(default_factory=dict)
-    default_value: str = None
+    default_value: str | None = None
 
 
 @dataclass
@@ -107,7 +107,7 @@ class A2LCompuVTabRange:
     name: str
     description: str
     values: dict[Tuple[int, int], str] = field(default_factory=dict)
-    default_value: str = None
+    default_value: str | None = None
 
 
 @dataclass
@@ -115,9 +115,6 @@ class A2LModCommon:
     pass
 
 
-@dataclass
-class A2LModPar:
-    pass
 
 
 @dataclass

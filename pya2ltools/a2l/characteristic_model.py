@@ -18,12 +18,12 @@ class A2LMeasurement:
     min: int = 0
     max: int = 0
     ecu_address: int = 0
-    bitmask: int = None
+    bitmask: int | None = None
     format: str = ""
     matrix_dim: list[int] = field(default_factory=list)
     annotations: list[A2LAnnotation] = field(default_factory=list)
     discrete: bool = False
-    virtual: VirtualMeasurement = None
+    virtual: VirtualMeasurement | None = None
 
 
 @dataclass
@@ -45,11 +45,11 @@ class A2LCharacteristicTypedefInternal:
     compu_method: str | A2LCompuMethod
     min: int
     max: int
-    extended_min: int = None
-    extended_max: int = None
-    format: str = None
-    bitmask: int = None
-    phys_unit: str = None
+    extended_min: int | None = None
+    extended_max: int | None = None
+    format: str | None = None
+    bitmask: int | None = None
+    phys_unit: str | None = None
     discrete: bool = False
 
 
@@ -65,7 +65,7 @@ class A2LCharacteristicArray(A2LCharacteristicTypedefInternal):
 
 @dataclass
 class A2LCharactersiticAscii(A2LCharacteristicTypedefInternal):
-    size: int = None
+    size: int | None = None
 
 
 @dataclass
@@ -94,12 +94,12 @@ class A2LCharacteristic:
     name: str
     description: str
     ecu_address: int
-    display_identifier: str = None
+    display_identifier: str | None = None
     annotations: list[A2LAnnotation] = field(default_factory=list)
-    dependent_characteristic: DependentCharacteristic = None
-    virtual_characteristic: VirtualCharacteristic = None
-    model_link: str = None
-    matrix_dim: list[int] = None
+    dependent_characteristic: DependentCharacteristic | None = None
+    virtual_characteristic: VirtualCharacteristic | None = None
+    model_link: str | None = None
+    matrix_dim: list[int] | None = None
 
 
 @dataclass
