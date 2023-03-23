@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
+from .mod_par_model import A2LModPar
+
 from .characteristic_model import (
     A2LCharacteristic,
     A2LMeasurement,
@@ -13,9 +15,10 @@ from .model import (
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
+    A2LInstance,
     A2LModCommon,
-    A2LModPar,
     A2LRecordLayout,
+    A2LStructure,
     A2LTransformer,
 )
 
@@ -62,7 +65,8 @@ class A2LModule:
     typedef_characteristics: list[A2LCharacteristicTypedef] = field(
         default_factory=list
     )
-    instances: list[A2LCharacteristic] = field(default_factory=list)
+    typedef_structures: list[A2LStructure] = field(default_factory=list)
+    instances: list[A2LInstance] = field(default_factory=list)
     transformers: list[A2LTransformer] = field(default_factory=list)
     blobs: list[A2LBlob] = field(default_factory=list)
 

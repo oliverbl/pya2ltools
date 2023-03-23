@@ -3,7 +3,7 @@ from typing import Any, Callable, Tuple
 
 def is_number(s: str) -> bool:
     try:
-        float(s)
+        parse_number(s)
         return True
     except ValueError:
         return False
@@ -46,6 +46,12 @@ def parse_members(tokens: list[str], field: str, name: str) -> Tuple[dict, list[
         tokens = tokens[1:]
     return {field: members}, tokens[2:]
 
+def parse_list_of_numbers(tokens: list[str]) -> Tuple[list[int], list[str]]:
+    numbers = []
+    while is_number(tokens[0]):
+        numbers.append(parse_number(tokens[0]))
+        tokens = tokens[1:]
+    return numbers, tokens
 
 # a lexing function takes a list of tokens and returns a dictionary of str to Object and sublist of the tokens, after processing
 Lexer_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]

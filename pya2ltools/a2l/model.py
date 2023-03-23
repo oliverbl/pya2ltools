@@ -140,3 +140,28 @@ class A2LBlob:
     ecu_address: int
     number_of_bytes: int
     calibration_access: str
+
+
+@dataclass
+class A2LStructureComponent:
+    name: str
+    datatype: str
+    offset: int
+    matrix_dim : list[int] | None = None
+
+
+@dataclass
+class A2LStructure:
+    name: str
+    size: int
+    description: str
+    components: list[A2LStructureComponent] = field(default_factory=list)
+
+@dataclass
+class A2LInstance:
+    name: str
+    description: str
+    reference: str
+    ecu_address: int
+    matrix_dim : list[int] | None = None
+    display_identifier: str | None = None

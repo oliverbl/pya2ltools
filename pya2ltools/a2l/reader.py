@@ -16,6 +16,7 @@ from .util import (
     Lexer,
     add_key_values,
     is_number,
+    parse_list_of_numbers,
     parse_members,
     parse_number,
     parse_string,
@@ -34,8 +35,10 @@ from .model import (
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
-    A2LModPar,
+    A2LInstance,
     A2LRecordLayout,
+    A2LStructure,
+    A2LStructureComponent,
     A2LTransformer,
     A2lFncValues,
     A2lLRescaleAxis,
@@ -65,9 +68,16 @@ from .project_model import (
     A2LProject,
     A2lFile,
 )
+from .mod_par_model import (
+    A2LIfData,
+    A2LIfDataPage,
+    A2LIfDataSegment,
+    A2LMemorySegment,
+    A2LModPar,
+)
 
 
-def project(tokens: list[str]) -> A2LProject:
+def project(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "PROJECT":
         raise Exception("PROJECT expected, got " + tokens[0] + "")
 
@@ -88,7 +98,7 @@ def project(tokens: list[str]) -> A2LProject:
     )
 
 
-def header(tokens: list[str]) -> list[str]:
+def header(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "HEADER":
         raise Exception("HEADER expected")
 
@@ -176,7 +186,41 @@ def blob(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"blobs": [A2LBlob(**params)]}, tokens
 
 
-def module(tokens: list[str]) -> list[str]:
+def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
+    if tokens[0] != "TYPEDEF_STRUCTURE":
+        raise Exception("TYPEDEF_STRUCTURE expected, got " + tokens[0])
+    tokens = tokens[1:]
+
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+    params["size"] = parse_number(tokens[0])
+    tokens = tokens[1:]
+
+    def structure_component(tokens: list[str]) -> Tuple[dict, list[str]]:
+        params = {}
+        params["name"] = tokens[0]
+        params["datatype"] = tokens[1]
+        params["offset"] = parse_number(tokens[2])
+        if tokens[3] == "MATRIX_DIM":
+            params2, tokens = parse_matrix_dim(tokens[3:])
+            params.update(params2)
+        else:
+            tokens = tokens[3:]
+        print(params)
+        return {"components": [A2LStructureComponent(**params)]}, tokens[2:]
+
+    lexer = {
+        "/begin": lambda x: ({}, x[1:]),
+        "STRUCTURE_COMPONENT": lambda x: structure_component(x[1:]),
+    }
+    tokens = parse_with_lexer(
+        lexer=lexer, name="TYPEDEF_STRUCTURE", tokens=tokens, params=params
+    )
+    return {"typedef_structures": [A2LStructure(**params)]}, tokens
+
+
+def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
 
@@ -200,7 +244,7 @@ def module(tokens: list[str]) -> list[str]:
         "INSTANCE": instance,
         "AXIS_PTS": functools.partial(skip_type, name="AXIS_PTS"),
         "TYPEDEF_AXIS": functools.partial(skip_type, name="TYPEDEF_AXIS"),
-        "TYPEDEF_STRUCTURE": functools.partial(skip_type, name="TYPEDEF_STRUCTURE"),
+        "TYPEDEF_STRUCTURE": typedef_structure,
         "TRANSFORMER": transformer,
         "BLOB": blob,
     }
@@ -209,14 +253,85 @@ def module(tokens: list[str]) -> list[str]:
     return {"modules": [A2LModule(**params)]}, tokens
 
 
+def page(tokens: list[str]) -> Tuple[Any, list[str]]:
+    if tokens[0] != "PAGE":
+        raise Exception("PAGE expected, got " + tokens[0])
+    tokens = tokens[1:]
+
+    params = {}
+    params["number"] = tokens[0]
+    modifier, tokens = parse_members(tokens[1:], "modifier", "PAGE")
+    params.update(modifier)
+    return {"pages": [A2LIfDataPage(**params)]}, tokens
+
+
+def segment(tokens: list[str]) -> Tuple[Any, list[str]]:
+    params = {}
+    params["offsets"], tokens = parse_list_of_numbers(tokens[1:])
+    lexer = {"/begin": lambda x: ({}, x[1:]), "PAGE": page}
+    tokens = parse_with_lexer(lexer=lexer, name="SEGMENT", tokens=tokens, params=params)
+    return {"segments": [A2LIfDataSegment(**params)]}, tokens
+
+
+def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
+    if tokens[0] != "IF_DATA":
+        raise Exception("IF_DATA expected, got " + tokens[0])
+    tokens = tokens[1:]
+
+    params = {}
+    params["name"] = tokens[0]
+    tokens = tokens[1:]
+    lexer = {
+        "/begin": lambda x: ({}, x[1:]),
+        "SEGMENT": segment,
+    }
+    tokens = parse_with_lexer(lexer=lexer, name="IF_DATA", tokens=tokens, params=params)
+    return {"if_data": [A2LIfData(**params)]}, tokens
+
+
+def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
+    params = {}
+    params["name"] = tokens[0]
+    params["description"], tokens = parse_string(tokens[1:])
+    params["program_type"] = tokens[0]
+    params["memory_type"] = tokens[1]
+    params["location"] = tokens[2]
+    params["address"] = parse_number(tokens[3])
+    params["size"] = parse_number(tokens[4])
+    params["offsets"], tokens = parse_list_of_numbers(tokens[5:])
+
+    lexer = {"/begin": lambda x: ({}, x[1:]), "IF_DATA": if_data}
+    tokens = parse_with_lexer(
+        lexer=lexer, name="MEMORY_SEGMENT", tokens=tokens, params=params
+    )
+
+    return {"memory_segments": [A2LMemorySegment(**params)]}, tokens
+
+
 def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     if tokens[0] != "MOD_PAR":
         raise Exception("MOD_PAR expected")
 
-    while tokens[0] != "/end" or tokens[1] != "MOD_PAR":
-        tokens = tokens[1:]
+    params = {}
+    params["description"], tokens = parse_string(tokens[1:])
 
-    return {"mod_par": [A2LModPar()]}, tokens[2:]
+    def system_constant(tokens: list[str]) -> Tuple[dict, list[str]]:
+        name = tokens[1]
+        val, tokens = parse_string(tokens[2:])
+        return {"system_constants": {name: val}}, tokens
+
+    lexer = {
+        "NO_OF_INTERFACES": lambda x: (
+            {"number_of_interfaces": parse_number(x[1])},
+            x[2:],
+        ),
+        "/begin": lambda x: ({}, x[1:]),
+        "MEMORY_SEGMENT": memory_segment,
+        "SYSTEM_CONSTANT": system_constant,
+    }
+    tokens = parse_with_lexer(lexer=lexer, name="MOD_PAR", tokens=tokens, params=params)
+
+    return {"mod_par": [A2LModPar(**params)]}, tokens
 
 
 def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -275,6 +390,7 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     def formula(tokens: list[str]) -> Tuple[Any, list[str]]:
         tokens = tokens[1:]
         formula_inv = None
+        formula = None
         while tokens[0] != "/end" or tokens[1] != "FORMULA":
             if tokens[0] == "FORMULA_INV":
                 formula_inv, tokens = parse_string(tokens[1:])
@@ -524,6 +640,7 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
         return {field: val}, tokens
 
     def parse_annotation_text(tokens: list[str]) -> Tuple[dict, list[str]]:
+        text = None
         while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
             text, tokens = parse_string(tokens)
         return {"text": text}, tokens[2:]
@@ -543,7 +660,7 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"annotations": A2LAnnotation(**params)}, tokens
 
 
-def parse_axis_descr(tokens: list[str]) -> Tuple[A2LAxisDescription, list[str]]:
+def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "AXIS_DESCR":
         raise Exception("AXIS_DESCR expected, got " + tokens[0])
 
@@ -764,7 +881,7 @@ def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
     params = {}
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
-    params["typedef"] = tokens[0]
+    params["reference"] = tokens[0]
     params["ecu_address"] = parse_number(tokens[1])
     lexer = {
         "MATRIX_DIM": parse_matrix_dim,
@@ -774,7 +891,7 @@ def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
         lexer=lexer, name="INSTANCE", tokens=tokens[2:], params=params
     )
 
-    return {"instances": [A2LCharacteristic(**params)]}, tokens
+    return {"instances": [A2LInstance(**params)]}, tokens
 
 
 def skip_type(tokens: list[str], name: str) -> Tuple[Any, list[str]]:
@@ -853,7 +970,7 @@ def clean_comments(tokens: list[str]) -> list[str]:
     return tokens
 
 
-def assp2_version(tokens: list[str]) -> Tuple[str, list[str]]:
+def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "ASAP2_VERSION":
         raise Exception("ASAP2_VERSION expected")
 
