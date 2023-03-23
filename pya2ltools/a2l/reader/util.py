@@ -1,5 +1,6 @@
 from typing import Any, Callable, Tuple
 
+Number = float | int
 
 def is_number(s: str) -> bool:
     try:
@@ -9,7 +10,7 @@ def is_number(s: str) -> bool:
         return False
 
 
-def parse_number(s: str) -> int:
+def parse_number(s: str) -> Number:
     if s.startswith("0x"):
         return int(s, 16)
     if s.startswith("0b"):

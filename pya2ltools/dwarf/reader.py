@@ -8,7 +8,7 @@ from .model import DwarfVariable
 
 
 def str_to_variable_path(path: str) -> list[str | int]:
-    path = []
+    path: list[str | int] = []
     # split variable_path by . and [] and return list of strings and indexes between []
     # e.g. "a.b[0].c" -> ["a", "b", 0, "c"]
     for part in re.split(r"(\[|\]|\.)", path):
@@ -34,7 +34,7 @@ class DwarfInfo:
     cache: dict[Any, Any] = field(default_factory=dict)
 
     @staticmethod
-    def from_elffile(file, variable_name: str = None) -> Self:
+    def from_elffile(file, variable_name: str | None = None) -> Self:
         _self = DwarfInfo()
 
         with open(file, "rb") as f:

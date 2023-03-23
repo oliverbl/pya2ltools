@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
 
+from .token import Tokens
+
 from ..model.compu_methods import (
     A2LCompuMethodFormula,
     A2LCompuMethodLinear,
@@ -412,15 +414,12 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     }
     compu_method_type = tokens[0]
 
-    params["format"] = tokens[1]
-    params["unit"], tokens = parse_string(tokens[2:])
+    params["format"], tokens = parse_string(tokens[1:])
+    params["unit"], tokens = parse_string(tokens)
 
     def coeffs(tokens: list[str]) -> Tuple[Any, list[str]]:
         coeffs = []
-        tokens = tokens[1:]
-        while is_number(tokens[0]):
-            coeffs.append(parse_number(tokens[0]))
-            tokens = tokens[1:]
+        coeffs, tokens = parse_list_of_numbers(tokens[1:])
         return {"coeffs": coeffs}, tokens
 
     def formula(tokens: list[str]) -> Tuple[Any, list[str]]:
@@ -992,27 +991,13 @@ def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"functions": [A2LFunction(**params)]}, tokens
 
 
-def file_to_tokens(path: Path) -> list[str]:
-    tokens = []
+# def clean_comments(tokens: list[str]) -> list[str]:
+#     while "/*" in tokens:
+#         start = tokens.index("/*")
+#         end = tokens.index("*/")
+#         tokens = tokens[:start] + tokens[end + 1 :]
 
-    with path.open("r", encoding="utf-8-sig") as f:
-        lines = f.readlines()
-    for line in lines:
-        temp = line.strip().split("//")[0].split(" ")
-        tokens += temp
-
-    empty_tokens = ["", " ", "\t", "\n"]
-
-    return [t for t in tokens if t not in empty_tokens]
-
-
-def clean_comments(tokens: list[str]) -> list[str]:
-    while "/*" in tokens:
-        start = tokens.index("/*")
-        end = tokens.index("*/")
-        tokens = tokens[:start] + tokens[end + 1 :]
-
-    return tokens
+#     return tokens
 
 
 def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -1026,9 +1011,8 @@ def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
 
 
 def read_a2l(path: Path) -> A2lFile:
-    tokens = file_to_tokens(path)
-
-    tokens = clean_comments(tokens)
+    tokens = Tokens.from_file(path)
+    # tokens = clean_comments(tokens)
 
     lexer = {
         "ASAP2_VERSION": assp2_version,
