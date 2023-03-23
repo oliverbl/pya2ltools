@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
 
-from .compu_methods import (
+from ..model.compu_methods import (
     A2LCompuMethodFormula,
     A2LCompuMethodLinear,
     A2LCompuMethodRational,
@@ -22,7 +22,7 @@ from .util import (
     parse_string,
     parse_with_lexer,
 )
-from .model import (
+from ..model.model import (
     A2LAnnotation,
     A2LAxisDescription,
     A2LAxisDescriptionComAxis,
@@ -48,7 +48,7 @@ from .model import (
     A2lLRescaleAxis,
     ByteOrder,
 )
-from .characteristic_model import (
+from ..model.characteristic_model import (
     A2LCharacteristic,
     A2LCharacteristicArray,
     A2LCharacteristicCube4,
@@ -64,7 +64,7 @@ from .characteristic_model import (
     VirtualMeasurement,
 )
 
-from .project_model import (
+from ..model.project_model import (
     A2LFunction,
     A2LGroup,
     A2LHeader,
@@ -72,7 +72,7 @@ from .project_model import (
     A2LProject,
     A2lFile,
 )
-from .mod_par_model import (
+from ..model.mod_par_model import (
     A2LIfData,
     A2LMemorySegment,
     A2LModPar,

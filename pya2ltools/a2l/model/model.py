@@ -4,7 +4,6 @@ from typing import Self, Tuple
 
 from .compu_methods import A2LCompuMethod
 
-
 @dataclass
 class A2LAnnotation:
     label: str
