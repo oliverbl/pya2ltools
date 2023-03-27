@@ -22,7 +22,7 @@ def test_a2l():
 
 def main():
     test_a2l()
-    # test_dwarf()
+    test_dwarf()
 
 
 if __name__ == "__main__":
