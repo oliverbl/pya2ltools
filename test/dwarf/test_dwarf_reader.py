@@ -40,6 +40,7 @@ class TestDwarfReader(unittest.TestCase):
         subprocess.run(args, check=True, cwd=current_folder)
         try:
             dwarf_info = DwarfInfo.from_elffile(current_folder / output)
+            # print(dwarf_info)
         except Exception as e:
             self.fail(f"Failed to parse dwarf info with {compiler} and {dwarf}: {e}")
 

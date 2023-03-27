@@ -65,7 +65,6 @@ class DwarfArray:
         for c in die.iter_children():
             if c.tag != "DW_TAG_subrange_type":
                 print("unexpected array child: ", c.tag)
-                print(c)
                 continue
             if "DW_AT_upper_bound" not in c.attributes:
                 print("array dimension without upper bound")
@@ -173,14 +172,15 @@ class DwarfVariable:
     @staticmethod
     def from_die(die, cache) -> Self:
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
-        print(name)
         file = DwarfVariable.resolve_file_name(die)
         line = die.attributes["DW_AT_decl_line"].value
         parser = DWARFExprParser(die.cu.structs)
         op = parser.parse_expr(die.attributes["DW_AT_location"].value)
-        if len(op) != 1 or op[0].op_name != "DW_OP_addr":
+        valid_ops = ["DW_OP_addr", "DW_OP_addrx"]
+        if len(op) != 1 or op[0].op_name not in valid_ops:
             print("unknown location type", die.attributes["DW_AT_location"].value)
-            return None
+            raise Exception("unknown location type")
+        location=op[0].args[0]
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
         _self = DwarfVariable(
             name=name, location=op[0].args[0], file=file, line=line, datatype=None
@@ -193,8 +193,6 @@ class DwarfVariable:
 def get_datatype_from_die(die, cache, datatype_name="Unknown"):
     if die in cache:
         return cache[die]
-
-    print(die.tag)
 
     if die.tag == "DW_TAG_array_type":
         return DwarfArray.from_die(die, cache)
