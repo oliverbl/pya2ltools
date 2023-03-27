@@ -1,17 +1,19 @@
 from dataclasses import dataclass, field
-from typing import Optional, Self
+from typing import Any, Optional, Self
+
+from .compu_methods import A2LCompuMethod
 
 from .mod_par_model import A2LModPar, A2LIfData
 
 from .characteristic_model import (
+    A2LAxisPts,
     A2LCharacteristic,
     A2LMeasurement,
     A2LCharacteristicTypedef,
+    A2LTypedefAxis,
 )
 from .model import (
-    A2LAxisPts,
     A2LBlob,
-    A2LCompuMethod,
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
@@ -20,7 +22,6 @@ from .model import (
     A2LRecordLayout,
     A2LStructure,
     A2LTransformer,
-    A2LTypedefAxis,
 )
 
 
@@ -73,6 +74,41 @@ class A2LModule:
     blobs: list[A2LBlob] = field(default_factory=list)
     a2ml: str = None
     if_data: list[A2LIfData] = field(default_factory=list)
+    _reference_dict: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        named_lists = [
+            self.characteristics,
+            self.measurements,
+            self.compu_methods,
+            self.axis_pts,
+            self.compu_tabs,
+            self.compu_vtabs,
+            self.compu_vtab_ranges,
+            self.groups,
+            self.functions,
+            self.record_layouts,
+            self.typedef_characteristics,
+            self.typedef_structures,
+            self.typedef_axes,
+            self.instances,
+            self.transformers,
+            self.blobs,
+            self.if_data,
+        ]
+
+        self._reference_dict = {
+            "NO_COMPU_METHOD": None
+        }
+
+        for named_list in named_lists:
+            for item in named_list:
+                self._reference_dict[item.name] = item
+        for named_list in named_lists:
+            if not named_list or not hasattr(named_list[0], "resolve_references"):
+                continue
+            for item in named_list:
+                item.resolve_references(self._reference_dict)
 
 
 @dataclass

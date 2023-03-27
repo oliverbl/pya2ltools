@@ -6,6 +6,7 @@ import functools
 from .token import Tokens
 
 from ..model.compu_methods import (
+    A2LCompuMethod,
     A2LCompuMethodFormula,
     A2LCompuMethodLinear,
     A2LCompuMethodRational,
@@ -26,14 +27,7 @@ from .util import (
 )
 from ..model.model import (
     A2LAnnotation,
-    A2LAxisDescription,
-    A2LAxisDescriptionComAxis,
-    A2LAxisDescriptionCurveAxis,
-    A2LAxisDescriptionFixAxis,
-    A2LAxisDescriptionResAxis,
-    A2LAxisPts,
     A2LBlob,
-    A2LCompuMethod,
     A2LCompuTab,
     A2LCompuVTab,
     A2LCompuVTabRange,
@@ -45,12 +39,17 @@ from ..model.model import (
     A2LStructure,
     A2LStructureComponent,
     A2LTransformer,
-    A2LTypedefAxis,
     A2lFncValues,
     A2lLRescaleAxis,
     ByteOrder,
 )
 from ..model.characteristic_model import (
+    A2LAxisDescription,
+    A2LAxisDescriptionComAxis,
+    A2LAxisDescriptionCurveAxis,
+    A2LAxisDescriptionFixAxis,
+    A2LAxisDescriptionResAxis,
+    A2LAxisPts,
     A2LCharacteristic,
     A2LCharacteristicArray,
     A2LCharacteristicCube4,
@@ -61,6 +60,7 @@ from ..model.characteristic_model import (
     A2LCharacteristicValue,
     A2LCharactersiticAscii,
     A2LMeasurement,
+    A2LTypedefAxis,
     DependentCharacteristic,
     VirtualCharacteristic,
     VirtualMeasurement,
@@ -595,7 +595,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         raise Exception("RECORD_LAYOUT expected, got " + tokens[0])
 
     params = {}
-    params["name"] = tokens[2]
+    params["name"] = tokens[1]
     tokens = tokens[2:]
 
     def fnc_value(tokens: list[str]) -> Tuple[Any, list[str]]:

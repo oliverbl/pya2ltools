@@ -1,9 +1,6 @@
 from dataclasses import dataclass, field
 import enum
-from typing import Self, Tuple
-
-from .compu_methods import A2LCompuMethod
-
+from typing import Any, Self, Tuple
 
 @dataclass
 class A2LAnnotation:
@@ -55,37 +52,6 @@ class A2LRecordLayout:
         A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues
     ] = field(default_factory=list)
 
-
-@dataclass
-class A2LAxisDescription:
-    measurement: str  # or characteristic?
-    compu_method: str | A2LCompuMethod
-    size: int
-    min: int
-    max: int
-    annotations: list[A2LAnnotation] = field(default_factory=list)
-    monotony: str | None = None
-
-
-@dataclass
-class A2LAxisDescriptionComAxis(A2LAxisDescription):
-    axis_pts_ref: str = ""
-
-
-@dataclass
-class A2LAxisDescriptionFixAxis(A2LAxisDescription):
-    par_dist: list[int] = field(default_factory=list)
-    par_list: list[str] = field(default_factory=list)
-
-
-@dataclass
-class A2LAxisDescriptionCurveAxis(A2LAxisDescription):
-    curve_axis_ref: str = ""
-
-
-@dataclass
-class A2LAxisDescriptionResAxis(A2LAxisDescriptionComAxis):
-    pass
 
 
 @dataclass
@@ -173,35 +139,11 @@ class A2LStructure:
 class A2LInstance:
     name: str
     description: str
-    reference: str
+    reference: Any
     ecu_address: int
     matrix_dim: list[int] | None = None
     display_identifier: str | None = None
 
+    def resolve_references(self, references: dict[str, Any]):
+        self.reference = references[self.reference]
 
-@dataclass
-class A2LAxisPts:
-    name: str
-    description: str
-    ecu_address: int
-    measurement: str
-    record_layout: str
-    offset: int
-    compu_method: str
-    max_number_sample_points: int
-    min: int
-    max: int
-    display_identifier: str | None = None
-
-
-@dataclass
-class A2LTypedefAxis:
-    name: str
-    description: str
-    measurement: str
-    record_layout: str
-    max_diff: float
-    compu_method: str
-    max_number_of_axis_points: int
-    lower_limit: int
-    upper_limit: int
