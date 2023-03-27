@@ -15,8 +15,9 @@ class DictWithIndex(collections.abc.Mapping):
 
     def __setitem__(self, key, value):
         self._items[key] = value
-        if len(value) > 0:
-            self.global_list.append(value[-1])
+        if isinstance(value, list):
+            if len(value) > 0:
+                self.global_list.append(value[-1])
 
     def __delitem__(self, key):
         del self._items[key]

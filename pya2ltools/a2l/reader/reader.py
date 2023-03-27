@@ -85,7 +85,8 @@ from ..model.mod_par_model import (
 
 def a2ml(tokens: Tokens) -> Tuple[dict, list[str]]:
     content = tokens.return_tokens_until("/end A2ML")
-    return {"a2ml": content}, tokens
+    content = "".join(content)
+    return {"a2ml": [content]}, tokens
 
 
 def project(tokens: list[str]) -> Tuple[dict, list[str]]:

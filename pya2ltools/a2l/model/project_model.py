@@ -52,6 +52,7 @@ class A2LGroup:
 class A2LModule:
     name: str = ""
     description: str = ""
+    a2ml: list[str] = field(default_factory=list)
     characteristics: list[A2LCharacteristic] = field(default_factory=list)
     measurements: list[A2LMeasurement] = field(default_factory=list)
     compu_methods: list[A2LCompuMethod] = field(default_factory=list)
@@ -72,7 +73,6 @@ class A2LModule:
     instances: list[A2LInstance] = field(default_factory=list)
     transformers: list[A2LTransformer] = field(default_factory=list)
     blobs: list[A2LBlob] = field(default_factory=list)
-    a2ml: str = None
     if_data: list[A2LIfData] = field(default_factory=list)
     global_list: list[Any] = field(default_factory=list)
     _reference_dict: dict[str, Any] = field(default_factory=dict)
