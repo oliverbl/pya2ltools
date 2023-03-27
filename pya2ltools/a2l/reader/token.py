@@ -8,14 +8,27 @@ class Tokens:
         self.tokens = tokens
         self._index = 0
 
+
+    @staticmethod
+    def split_and_preserve_delimiter(text: str, delimiter: str) -> list[str]:
+        tokens = []
+        for e in text.split(delimiter):
+            if e:
+                tokens.append(e)
+            tokens.append(delimiter)
+        return tokens[:-1]
+
     @staticmethod
     def from_file(path: str) -> Self:
         tokens = []
         with path.open("r", encoding="utf-8-sig") as f:
             lines = f.readlines()
         for line in lines:
-            temp = line.strip().split("//")[0].split(" ")
-            tokens += temp
+            temp = line.strip()
+            temp = Tokens.split_and_preserve_delimiter(temp, delimiter="//")
+            for t in temp:
+                tokens += Tokens.split_and_preserve_delimiter(t, delimiter=" ")
+            tokens += ["\n"]
         return Tokens(tokens)
 
     def _skip_comments_and_whitespaces(self, index) -> int:
@@ -55,3 +68,17 @@ class Tokens:
 
     def __len__(self):
         return max(len(self.tokens) - self._index, 0)
+
+    def return_tokens_until(self, search_string: str) -> list[str]:
+        search_tokens = Tokens.split_and_preserve_delimiter(search_string, delimiter=" ")
+        for i in range(len(self)):
+            end = self._index + i + len(search_tokens)
+            if self.tokens[self._index + i : end] == search_tokens:
+                tokens = self.tokens[self._index : end]
+                self._index = self._skip_comments_and_whitespaces(end)
+                return tokens
+        return None
+    
+
+    def __str__(self):
+        return str(self.tokens[ self._index : self._index + 10])

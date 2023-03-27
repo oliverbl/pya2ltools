@@ -80,6 +80,10 @@ from ..model.mod_par_model import (
     A2LModPar,
 )
 
+def a2ml(tokens: Tokens) -> Tuple[dict, list[str]]:
+    
+    content = tokens.return_tokens_until("/end A2ML")
+    return {"a2ml": content}, tokens
 
 def project(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "PROJECT":
@@ -278,13 +282,14 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
         "TYPEDEF_STRUCTURE": typedef_structure,
         "TRANSFORMER": transformer,
         "BLOB": blob,
+        "A2ML": a2ml,
     }
 
     tokens = parse_with_lexer(lexer=lexer, name="MODULE", tokens=tokens, params=params)
     return {"modules": [A2LModule(**params)]}, tokens
 
 
-def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
+def if_data(tokens: Tokens) -> Tuple[dict, list[str]]:
     if tokens[0] != "IF_DATA":
         raise Exception("IF_DATA expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -292,12 +297,8 @@ def if_data(tokens: list[str]) -> Tuple[dict, list[str]]:
     params = {}
     params["name"] = tokens[0]
     tokens = tokens[1:]
-    params["content"] = []
-    while tokens[0] != "/end" or tokens[1] != "IF_DATA":
-        params["content"].append(tokens[0])
-        tokens = tokens[1:]
-
-    return {"if_data": [A2LIfData(**params)]}, tokens[2:]
+    params["content"] = tokens.return_tokens_until("/end IF_DATA")
+    return {"if_data": [A2LIfData(**params)]}, tokens
 
 
 def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:

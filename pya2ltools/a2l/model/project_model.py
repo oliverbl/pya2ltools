@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, Self
 
-from .mod_par_model import A2LModPar
+from .mod_par_model import A2LModPar, A2LIfData
 
 from .characteristic_model import (
     A2LCharacteristic,
@@ -71,6 +71,8 @@ class A2LModule:
     instances: list[A2LInstance] = field(default_factory=list)
     transformers: list[A2LTransformer] = field(default_factory=list)
     blobs: list[A2LBlob] = field(default_factory=list)
+    a2ml: str = None
+    if_data: list[A2LIfData] = field(default_factory=list)
 
 
 @dataclass
