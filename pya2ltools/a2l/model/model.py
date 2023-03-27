@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import enum
 from typing import Any, Self, Tuple
 
+
 @dataclass
 class A2LAnnotation:
     label: str
@@ -51,7 +52,6 @@ class A2LRecordLayout:
     fields: list[
         A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues
     ] = field(default_factory=list)
-
 
 
 @dataclass
@@ -146,4 +146,3 @@ class A2LInstance:
 
     def resolve_references(self, references: dict[str, Any]):
         self.reference = references[self.reference]
-

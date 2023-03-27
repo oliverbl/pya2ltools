@@ -49,6 +49,7 @@ class A2LAxisDescription:
         self.compu_method = references[self.compu_method]
         self.measurement = references[self.measurement]
 
+
 @dataclass
 class A2LAxisDescriptionComAxis(A2LAxisDescription):
     axis_pts_ref: str = ""
@@ -198,4 +199,3 @@ class A2LTypedefAxis:
     max_number_of_axis_points: int
     lower_limit: int
     upper_limit: int
-

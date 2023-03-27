@@ -3,7 +3,7 @@ from typing import Any
 
 
 class DictWithIndex(collections.abc.Mapping):
-    def __init__(self, items: list[Any] = None):
+    def __init__(self):
         self._items = {}
         self.global_list = []
 

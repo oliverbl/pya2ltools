@@ -8,7 +8,6 @@ class Tokens:
         self.tokens = tokens
         self._index = 0
 
-
     @staticmethod
     def split_and_preserve_delimiter(text: str, delimiter: str) -> list[str]:
         tokens = []
@@ -70,7 +69,9 @@ class Tokens:
         return max(len(self.tokens) - self._index, 0)
 
     def return_tokens_until(self, search_string: str) -> list[str]:
-        search_tokens = Tokens.split_and_preserve_delimiter(search_string, delimiter=" ")
+        search_tokens = Tokens.split_and_preserve_delimiter(
+            search_string, delimiter=" "
+        )
         for i in range(len(self)):
             end = self._index + i + len(search_tokens)
             if self.tokens[self._index + i : end] == search_tokens:
@@ -78,7 +79,6 @@ class Tokens:
                 self._index = self._skip_comments_and_whitespaces(end)
                 return tokens
         return None
-    
 
     def __str__(self):
-        return str(self.tokens[ self._index : self._index + 10])
+        return str(self.tokens[self._index : self._index + 10])

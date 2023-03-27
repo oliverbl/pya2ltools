@@ -84,7 +84,7 @@ def parse_with_lexer(
         func = lexer.get(tokens[0], None)
         if func is None:
             print(tokens[:20])
-            raise Exception(f"Unknown token  {tokens[0]} when parsing {name}")
+            raise Exception(f"Unknown token {tokens[0]} when parsing {name}")
         key_value, tokens = func(tokens)
         add_key_values(key_value, params)
     return tokens[2:]
