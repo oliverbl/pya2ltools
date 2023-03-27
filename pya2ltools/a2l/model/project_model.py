@@ -74,6 +74,7 @@ class A2LModule:
     blobs: list[A2LBlob] = field(default_factory=list)
     a2ml: str = None
     if_data: list[A2LIfData] = field(default_factory=list)
+    global_list: list[Any] = field(default_factory=list)
     _reference_dict: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -97,9 +98,7 @@ class A2LModule:
             self.if_data,
         ]
 
-        self._reference_dict = {
-            "NO_COMPU_METHOD": None
-        }
+        self._reference_dict = {"NO_COMPU_METHOD": None}
 
         for named_list in named_lists:
             for item in named_list:

@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Any, Callable, Tuple
 import functools
 
+from .dict_with_index import DictWithIndex
+
 from .token import Tokens
 
 from ..model.compu_methods import (
@@ -80,10 +82,11 @@ from ..model.mod_par_model import (
     A2LModPar,
 )
 
+
 def a2ml(tokens: Tokens) -> Tuple[dict, list[str]]:
-    
     content = tokens.return_tokens_until("/end A2ML")
     return {"a2ml": content}, tokens
+
 
 def project(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "PROJECT":
@@ -257,7 +260,7 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
 
-    params = {}
+    params = DictWithIndex()
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
@@ -286,7 +289,7 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     }
 
     tokens = parse_with_lexer(lexer=lexer, name="MODULE", tokens=tokens, params=params)
-    return {"modules": [A2LModule(**params)]}, tokens
+    return {"modules": [A2LModule(**params, global_list=params.global_list)]}, tokens
 
 
 def if_data(tokens: Tokens) -> Tuple[dict, list[str]]:
