@@ -180,7 +180,7 @@ class DwarfVariable:
         if len(op) != 1 or op[0].op_name not in valid_ops:
             print("unknown location type", die.attributes["DW_AT_location"].value)
             raise Exception("unknown location type")
-        location=op[0].args[0]
+        location = op[0].args[0]
         ref_die = die.get_DIE_from_attribute("DW_AT_type")
         _self = DwarfVariable(
             name=name, location=op[0].args[0], file=file, line=line, datatype=None
