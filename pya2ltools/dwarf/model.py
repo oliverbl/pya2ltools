@@ -37,6 +37,8 @@ class DwarfMember:
         offset_form: str = die.attributes["DW_AT_data_member_location"].form
         if (
             offset_form.startswith("DW_FORM_data")
+            or offset_form.startswith("DW_FORM_udata")
+            or offset_form.startswith("DW_FORM_sdata")
             or offset_form == "DW_FORM_implicit_const"
         ):
             offset = die.attributes["DW_AT_data_member_location"].value
