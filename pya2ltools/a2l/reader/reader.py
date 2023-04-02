@@ -5,7 +5,7 @@ import functools
 
 from .dict_with_index import DictWithIndex
 
-from .token import Tokens
+from .token import Tokens, UnknownTokenError
 
 from ..model.compu_methods import (
     A2LCompuMethod,
@@ -84,13 +84,13 @@ from ..model.mod_par_model import (
 )
 
 
-def a2ml(tokens: Tokens) -> Tuple[dict, list[str]]:
+def a2ml(tokens: Tokens) -> Tuple[dict, Tokens]:
     content = tokens.return_tokens_until("/end A2ML")
     content = "".join(content)
     return {"a2ml": [A2ML(content)]}, tokens
 
 
-def project(tokens: list[str]) -> Tuple[dict, list[str]]:
+def project(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "PROJECT":
         raise Exception("PROJECT expected, got " + tokens[0] + "")
 
@@ -111,14 +111,14 @@ def project(tokens: list[str]) -> Tuple[dict, list[str]]:
     )
 
 
-def header(tokens: list[str]) -> Tuple[dict, list[str]]:
+def header(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "HEADER":
         raise Exception("HEADER expected")
     tokens = tokens[1:]
     params = {}
     params["description"], tokens = parse_string(tokens)
 
-    def version(tokens: list[str]) -> Tuple[dict, list[str]]:
+    def version(tokens: Tokens) -> Tuple[dict, Tokens]:
         version, tokens = parse_string(tokens[1:])
         return {"version": version}, tokens
 
@@ -130,7 +130,7 @@ def header(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"header": A2LHeader(**params)}, tokens
 
 
-def group(tokens: list[str]) -> Tuple[dict, list[str]]:
+def group(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "GROUP":
         raise Exception("GROUP expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -160,7 +160,7 @@ def group(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"groups": [A2LGroup(**params)]}, tokens
 
 
-def transformer(tokens: list[str]) -> Tuple[dict, list[str]]:
+def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "TRANSFORMER":
         raise Exception("TRANSFORMER expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -189,7 +189,7 @@ def transformer(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"transformers": [A2LTransformer(**params)]}, tokens
 
 
-def blob(tokens: list[str]) -> Tuple[dict, list[str]]:
+def blob(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "BLOB":
         raise Exception("BLOB expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -207,7 +207,7 @@ def blob(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"blobs": [A2LBlob(**params)]}, tokens
 
 
-def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
+def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "TYPEDEF_STRUCTURE":
         raise Exception("TYPEDEF_STRUCTURE expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -218,7 +218,7 @@ def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
     params["size"] = parse_number(tokens[0])
     tokens = tokens[1:]
 
-    def structure_component(tokens: list[str]) -> Tuple[dict, list[str]]:
+    def structure_component(tokens: Tokens) -> Tuple[dict, Tokens]:
         params = {}
         params["name"] = tokens[0]
         params["datatype"] = tokens[1]
@@ -240,7 +240,7 @@ def typedef_structure(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"typedef_structures": [A2LStructure(**params)]}, tokens
 
 
-def typedef_axis(tokens: list[str]) -> Tuple[dict, list[str]]:
+def typedef_axis(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "TYPEDEF_AXIS":
         raise Exception("TYPEDEF_AXIS expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -258,7 +258,7 @@ def typedef_axis(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"typedef_axes": [A2LTypedefAxis(**params)]}, tokens
 
 
-def module(tokens: list[str]) -> Tuple[dict, list[str]]:
+def module(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
 
@@ -294,7 +294,7 @@ def module(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"modules": [A2LModule(**params, global_list=params.global_list)]}, tokens
 
 
-def if_data(tokens: Tokens) -> Tuple[dict, list[str]]:
+def if_data(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "IF_DATA":
         raise Exception("IF_DATA expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -305,7 +305,7 @@ def if_data(tokens: Tokens) -> Tuple[dict, list[str]]:
     return {"if_data": [A2LIfData(**params)]}, tokens
 
 
-def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
+def memory_segment(tokens: Tokens) -> Tuple[dict, Tokens]:
     params = {}
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
@@ -323,14 +323,14 @@ def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"memory_segments": [A2LMemorySegment(**params)]}, tokens
 
 
-def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
+def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "MOD_PAR":
         raise Exception("MOD_PAR expected")
 
     params = {}
     params["description"], tokens = parse_string(tokens[1:])
 
-    def system_constant(tokens: list[str]) -> Tuple[dict, list[str]]:
+    def system_constant(tokens: Tokens) -> Tuple[dict, Tokens]:
         name, tokens = parse_string(tokens[1:])
         val, tokens = parse_string(tokens)
         return {"system_constants": {name: val}}, tokens
@@ -349,7 +349,7 @@ def mod_par(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"mod_par": [A2LModPar(**params)]}, tokens
 
 
-def mod_common(tokens: list[str]) -> Tuple[dict, list[str]]:
+def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "MOD_COMMON":
         raise Exception("MOD_COMMON expected")
     tokens = tokens[1:]
@@ -377,7 +377,7 @@ def mod_common(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"mod_common": [A2LModCommon(**params)]}, tokens
 
 
-def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
+def tab_intp(tokens: Tokens) -> Tuple[Any, Tokens]:
     params = {}
     if tokens[0] == "COMPU_TAB_REF":
         params["compu_tab_ref"] = tokens[1]
@@ -400,7 +400,7 @@ def tab_intp(tokens: list[str]) -> Tuple[Any, list[str]]:
     return params, tokens[2:]
 
 
-def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
+def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "COMPU_METHOD":
         raise Exception("COMPU_METHOD expected, got " + tokens[0])
 
@@ -422,12 +422,12 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     params["format"], tokens = parse_string(tokens[1:])
     params["unit"], tokens = parse_string(tokens)
 
-    def coeffs(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def coeffs(tokens: Tokens) -> Tuple[Any, Tokens]:
         coeffs = []
         coeffs, tokens = parse_list_of_numbers(tokens[1:])
         return {"coeffs": coeffs}, tokens
 
-    def formula(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def formula(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[1:]
         formula_inv = None
         formula = None
@@ -455,7 +455,7 @@ def compu_method(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"compu_methods": [class_(**params)]}, tokens
 
 
-def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
+def compu_tab(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "COMPU_TAB":
         raise Exception("COMPU_TAB expected, got " + tokens[0])
 
@@ -470,7 +470,7 @@ def compu_tab(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"compu_tabs": [A2LCompuTab(**params)]}, tokens
 
 
-def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
+def compu_vtab(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "COMPU_VTAB":
         raise Exception("COMPU_VTAB expected, got " + tokens[0])
 
@@ -499,7 +499,7 @@ def compu_vtab(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"compu_vtabs": [A2LCompuVTab(**params)]}, tokens[2:]
 
 
-def compu_vtab_range(tokens: list[str]) -> Tuple[Any, list[str]]:
+def compu_vtab_range(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "COMPU_VTAB_RANGE":
         raise Exception("COMPU_VTAB_RANGE expected, got " + tokens[0])
 
@@ -525,7 +525,7 @@ def compu_vtab_range(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"compu_vtab_ranges": [A2LCompuVTabRange(**params)]}, tokens[2:]
 
 
-def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
+def parse_matrix_dim(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "MATRIX_DIM":
         raise Exception("MATRIX_DIM expected, got " + tokens[0])
 
@@ -539,7 +539,7 @@ def parse_matrix_dim(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"matrix_dim": dimensions}, tokens
 
 
-def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
+def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
 
@@ -557,7 +557,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     tokens = tokens[6:]
 
-    def virtual_measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def virtual_measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[1:]
         variables = []
         while tokens[0] != "/end" or tokens[1] != "VIRTUAL":
@@ -565,7 +565,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
             tokens = tokens[1:]
         return {"virtual": VirtualMeasurement(variables)}, tokens[2:]
 
-    def format(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def format(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[1:]
         f, tokens = parse_string(tokens)
         return {"format": f}, tokens
@@ -599,7 +599,7 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"measurements": [A2LMeasurement(**params)]}, tokens
 
 
-def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
+def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "RECORD_LAYOUT":
         raise Exception("RECORD_LAYOUT expected, got " + tokens[0])
 
@@ -607,7 +607,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
     params["name"] = tokens[1]
     tokens = tokens[2:]
 
-    def fnc_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def fnc_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["position"] = parse_number(tokens[1])
         params["datatype"] = tokens[2]
@@ -615,7 +615,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         params["addressing_mode"] = tokens[4]
         return {"fields": [A2lFncValues(**params)]}, tokens[5:]
 
-    def axis_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens[1])
@@ -624,7 +624,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         params["addressing_mode"] = tokens[4]
         return {"fields": [A2LRecordLayoutAxisPts(**params)]}, tokens[5:]
 
-    def rescale_axis(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def rescale_axis(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens[1])
@@ -634,7 +634,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
         params["addressing_mode"] = tokens[5]
         return {"fields": [A2lLRescaleAxis(**params)]}, tokens[6:]
 
-    def no_axis_value(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def no_axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens[1])
@@ -666,7 +666,7 @@ def record_layout(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"record_layouts": [A2LRecordLayout(**params)]}, tokens
 
 
-def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
+def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "ANNOTATION":
         raise Exception("ANNOTATION expected, got " + tokens[0])
 
@@ -674,11 +674,11 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params = {}
 
-    def parse_s(tokens: list[str], field: str) -> Tuple[dict, list[str]]:
+    def parse_s(tokens: Tokens, field: str) -> Tuple[dict, Tokens]:
         val, tokens = parse_string(tokens)
         return {field: val}, tokens
 
-    def parse_annotation_text(tokens: list[str]) -> Tuple[dict, list[str]]:
+    def parse_annotation_text(tokens: Tokens) -> Tuple[dict, Tokens]:
         text = None
         while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
             text, tokens = parse_string(tokens)
@@ -699,7 +699,7 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"annotations": [A2LAnnotation(**params)]}, tokens
 
 
-def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
+def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "AXIS_DESCR":
         raise Exception("AXIS_DESCR expected, got " + tokens[0])
 
@@ -725,11 +725,11 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
 
     tokens = tokens[6:]
 
-    def fix_axis_par_dist(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def fix_axis_par_dist(tokens: Tokens) -> Tuple[Any, Tokens]:
         numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_dist": numbers}, tokens
 
-    def fix_axis_par_list(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def fix_axis_par_list(tokens: Tokens) -> Tuple[Any, Tokens]:
         numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_list": numbers}, tokens[2:]
 
@@ -748,7 +748,7 @@ def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
     return {"axis_descriptions": [axis_type(**params)]}, tokens
 
 
-def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "CHARACTERISTIC":
         raise Exception("CHARACTERISTIC expected, got " + tokens[0])
 
@@ -769,7 +769,10 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     }
 
     if not characteristic_type in char_types:
-        raise Exception("Unknown characteristic type, got " + tokens[0])
+        raise UnknownTokenError(
+            tokens.get(0),
+            expected="VALUE | VAL_BLK | ASCII | CURVE | MAP | CUBOID | CUBE_4",
+        )
 
     char_type, expected_keywords = char_types[characteristic_type]
 
@@ -782,7 +785,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     tokens = tokens[7:]
 
-    def dependent_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def dependent_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[1:]
         formula, tokens = parse_string(tokens)
         variables = []
@@ -793,7 +796,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
             "dependent_characteristic": DependentCharacteristic(formula, variables)
         }, tokens[2:]
 
-    def virtual_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+    def virtual_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[1:]
         formula, tokens = parse_string(tokens)
         variables = []
@@ -840,7 +843,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"characteristics": [A2LCharacteristic(**params)]}, tokens
 
 
-def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
+def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "TYPEDEF_CHARACTERISTIC":
         raise Exception("TYPEDEF_CHARACTERISTIC expected, got " + tokens[0])
 
@@ -863,7 +866,10 @@ def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     }
 
     if not characteristic_type in char_types:
-        raise Exception("Unknown characteristic type, got " + tokens[0])
+        raise UnknownTokenError(
+            tokens.get(0),
+            expected="VALUE | VAL_BLK | ASCII | CURVE | MAP | CUBOID | CUBE_4",
+        )
 
     char_type, expected_keywords = char_types[characteristic_type]
 
@@ -904,7 +910,7 @@ def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"characteristics": [A2LCharacteristicTypedef(**params)]}, tokens
 
 
-def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
+def instance(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "INSTANCE":
         raise Exception("INSTANCE expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -925,7 +931,7 @@ def instance(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"instances": [A2LInstance(**params)]}, tokens
 
 
-def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
+def axis_pts(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "AXIS_PTS":
         raise Exception("AXIS_PTS expected, got " + tokens[0])
 
@@ -952,7 +958,7 @@ def axis_pts(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"axis_pts": [A2LAxisPts(**params)]}, tokens
 
 
-def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
+def function_type(tokens: Tokens) -> Tuple[Any, Tokens]:
     if tokens[0] != "FUNCTION":
         raise Exception("FUNCTION expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -989,7 +995,7 @@ def function_type(tokens: list[str]) -> Tuple[Any, list[str]]:
     return {"functions": [A2LFunction(**params)]}, tokens
 
 
-def assp2_version(tokens: list[str]) -> Tuple[dict, list[str]]:
+def assp2_version(tokens: Tokens) -> Tuple[dict, Tokens]:
     if tokens[0] != "ASAP2_VERSION":
         raise Exception("ASAP2_VERSION expected")
 
