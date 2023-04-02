@@ -1,35 +1,65 @@
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
 WHITESPACE_TOKENS = ["", " ", "\t", "\n"]
 
 
+@dataclass()
+class Token:
+    content: str
+    line: int
+    pos: int
+    filename: Path = None
+
+    def __str__(self):
+        return self.content
+
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, str):
+            return self.content == __value
+        if isinstance(__value, Token):
+            return self.content == __value.content
+
+    @property
+    def location(self) -> str:
+        return f"{self.filename}, line {self.line}:{self.pos}"
+
+
 class Tokens:
-    def __init__(self, tokens: list[str]):
-        self.tokens = tokens
+    def __init__(self, tokens: list[str], filepath: Path):
+        self.tokens: list[Token] = tokens
+        self.filepath = filepath
         self._index = self._skip_comments_and_whitespaces(0)
 
     @staticmethod
-    def split_and_preserve_delimiter(text: str, delimiter: str) -> list[str]:
+    def split_and_preserve_delimiter(
+        text: str, delimiter: str, line: int, pos: int
+    ) -> list[str]:
         tokens = []
-        for e in text.split(delimiter):
-            if e:
-                tokens.append(e)
-            tokens.append(delimiter)
-        return tokens[:-1]
+        while True:
+            index = text.find(delimiter)
+            if index == -1:
+                tokens.append(Token(text, line=line, pos=pos))
+                break
+            tokens.append(Token(text[:index], line=line, pos=pos))
+            tokens.append(Token(delimiter, line=line, pos=index + pos))
+            pos += index + len(delimiter)
+            text = text[index + len(delimiter) :]
+        return tokens
 
     @staticmethod
-    def get_left_and_right_whitespaces(text: str) -> tuple[str, str]:
+    def get_left_and_right_whitespaces(text: str, line: int) -> tuple[str, str]:
         left = []
         right = []
         i = 0
         while i < len(text) and text[i] in WHITESPACE_TOKENS:
-            left += text[i]
+            left.append(Token(text[i], line, i))
             i += 1
         i = 0
         text = text.lstrip()
         while i < len(text) and text[-1 - i] in WHITESPACE_TOKENS:
-            right += text[-1 - i]
+            right.append(Token(text[-1 - i], line, len(text) - 1 - i))
             i += 1
         return left, right[::-1]
 
@@ -37,33 +67,42 @@ class Tokens:
     def from_file(path: Path | str) -> Self:
         if isinstance(path, str):
             path = Path(path)
-        tokens = []
+        tokens: list[Token] = []
         with path.open("r", encoding="utf-8-sig") as f:
             lines: list[str] = f.readlines()
-        for line in lines:
-            left, right = Tokens.get_left_and_right_whitespaces(line)
+        for no, line in enumerate(lines, start=1):
+            left, right = Tokens.get_left_and_right_whitespaces(line, no)
             tokens += left
+
             temp = line.strip()
-            temp = Tokens.split_and_preserve_delimiter(temp, delimiter="//")
+            index = len(line) - len(line.lstrip())
+            temp = Tokens.split_and_preserve_delimiter(
+                temp, delimiter="//", line=no, pos=index + 1
+            )
             for t in temp:
-                tokens += Tokens.split_and_preserve_delimiter(t, delimiter=" ")
+                t2 = Tokens.split_and_preserve_delimiter(
+                    t.content, delimiter=" ", line=no, pos=t.pos
+                )
+                tokens += t2
             tokens += right
-        return Tokens(tokens)
+        for t in tokens:
+            t.filename = path
+        return Tokens(tokens, filepath=path)
 
     def _skip_comments_and_whitespaces(self, index) -> int:
-        while (
-            self.tokens[index] in WHITESPACE_TOKENS
-            or self.tokens[index] == "//"
-            or self.tokens[index] == "/*"
+        while index < len(self.tokens) and (
+            self.tokens[index].content in WHITESPACE_TOKENS
+            or self.tokens[index].content == "//"
+            or self.tokens[index].content == "/*"
         ):
-            if self.tokens[index] in WHITESPACE_TOKENS:
+            if self.tokens[index].content in WHITESPACE_TOKENS:
                 index += 1
-            if self.tokens[index] == "/*":
-                while self.tokens[index] != "*/":
+            if self.tokens[index].content == "/*":
+                while self.tokens[index].content != "*/":
                     index += 1
                 index = index + 1
-            if self.tokens[index] == "//":
-                while self.tokens[index] != "\n":
+            if self.tokens[index].content == "//":
+                while self.tokens[index].content != "\n":
                     index += 1
                 index = index + 1
         return index
@@ -83,22 +122,38 @@ class Tokens:
             if index.start is not None:
                 self._index = self._find_next_index(index.start)
             return self
-        return self.tokens[self._find_next_index(index)]
+        return self.tokens[self._find_next_index(index)].content
 
     def __len__(self):
         return max(len(self.tokens) - self._index, 0)
 
     def return_tokens_until(self, search_string: str) -> list[str]:
         search_tokens = Tokens.split_and_preserve_delimiter(
-            search_string, delimiter=" "
+            search_string, delimiter=" ", line=0, pos=0
         )
         for i in range(len(self)):
             end = self._index + i + len(search_tokens)
             if self.tokens[self._index + i : end] == search_tokens:
                 tokens = self.tokens[self._index : end]
                 self._index = self._skip_comments_and_whitespaces(end)
-                return tokens[:-3]
+                return [t.content for t in tokens[:-3]]
         return None
 
     def __str__(self):
-        return str(self.tokens[self._index : self._index + 30])
+        return str(self.tokens[self._index - 10 : self._index + 20])
+
+    def get(self, index: int) -> Token:
+        return self.tokens[self._index + index]
+
+    def get_pos(self, index: int) -> Token:
+        token = self.tokens[self._index + index]
+        return f"Line: {token.line}, Pos: {token.pos}, File: {self.filepath}"
+
+
+class UnknownTokenError(Exception):
+    def __init__(self, token: Token, expected: str = None):
+        if expected is not None:
+            expected = f", expected: {expected}"
+        else:
+            expected = ""
+        super().__init__(f"Unknown token {token.content}{expected} at {token.location}")
