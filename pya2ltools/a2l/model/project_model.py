@@ -37,22 +37,42 @@ class A2LFunction:
     sub_functions: list[Self] = field(default_factory=list)
     version: str | None = None
 
+    def resolve_references(self, references: dict[str, Any]):
+        self.ref_characteristics = [references[c] for c in self.ref_characteristics]
+        self.def_characteristics = [references[c] for c in self.def_characteristics]
+        self.in_measurements = [references[m] for m in self.in_measurements]
+        self.out_measurements = [references[m] for m in self.out_measurements]
+        self.loc_measurements = [references[m] for m in self.loc_measurements]
+        self.sub_functions = [references[f] for f in self.sub_functions]
+
 
 @dataclass
 class A2LGroup:
     name: str
     description: str = ""
+    root: bool = False
     characteristics: list[A2LCharacteristic] = field(default_factory=list)
     measurements: list[A2LMeasurement] = field(default_factory=list)
     sub_groups: list[Self] = field(default_factory=list)
     function_lists: list[A2LFunction] = field(default_factory=list)
+
+    def resolve_references(self, references: dict[str, Any]):
+        self.characteristics = [references[c] for c in self.characteristics]
+        self.measurements = [references[m] for m in self.measurements]
+        self.sub_groups = [references[g] for g in self.sub_groups]
+        self.function_lists = [references[f] for f in self.function_lists]
+
+
+@dataclass
+class A2ML:
+    content: str
 
 
 @dataclass
 class A2LModule:
     name: str = ""
     description: str = ""
-    a2ml: list[str] = field(default_factory=list)
+    a2ml: list[A2ML] = field(default_factory=list)
     characteristics: list[A2LCharacteristic] = field(default_factory=list)
     measurements: list[A2LMeasurement] = field(default_factory=list)
     compu_methods: list[A2LCompuMethod] = field(default_factory=list)
@@ -78,35 +98,12 @@ class A2LModule:
     _reference_dict: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        named_lists = [
-            self.characteristics,
-            self.measurements,
-            self.compu_methods,
-            self.axis_pts,
-            self.compu_tabs,
-            self.compu_vtabs,
-            self.compu_vtab_ranges,
-            self.groups,
-            self.functions,
-            self.record_layouts,
-            self.typedef_characteristics,
-            self.typedef_structures,
-            self.typedef_axes,
-            self.instances,
-            self.transformers,
-            self.blobs,
-            self.if_data,
-        ]
-
         self._reference_dict = {"NO_COMPU_METHOD": None}
-
-        for named_list in named_lists:
-            for item in named_list:
+        for item in self.global_list:
+            if hasattr(item, "name"):
                 self._reference_dict[item.name] = item
-        for named_list in named_lists:
-            if not named_list or not hasattr(named_list[0], "resolve_references"):
-                continue
-            for item in named_list:
+        for item in self.global_list:
+            if hasattr(item, "resolve_references"):
                 item.resolve_references(self._reference_dict)
 
 

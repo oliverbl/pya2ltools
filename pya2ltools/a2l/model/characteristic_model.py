@@ -19,13 +19,15 @@ class A2LMeasurement:
     description: str
     datatype: str
     compu_method: A2LCompuMethod
-    display_identifier: str = ""
+    display_identifier: str = None
+    offset_1: int = 0
+    offset_2: int = 0
     min: int = 0
     max: int = 0
     ecu_address: int = 0
     bitmask: int | None = None
-    format: str = ""
-    matrix_dim: list[int] = field(default_factory=list)
+    format: str = None
+    matrix_dim: list[int] = None
     annotations: list[A2LAnnotation] = field(default_factory=list)
     discrete: bool = False
     virtual: VirtualMeasurement | None = None
@@ -47,12 +49,19 @@ class A2LAxisDescription:
 
     def resolve_references(self, references: dict[str, Any]):
         self.compu_method = references[self.compu_method]
-        self.measurement = references[self.measurement]
+        if self.measurement == "NO_INPUT_QUANTITY":
+            self.measurement = None
+        else:
+            self.measurement = references[self.measurement]
 
 
 @dataclass
 class A2LAxisDescriptionComAxis(A2LAxisDescription):
     axis_pts_ref: str = ""
+
+    def resolve_references(self, references: dict[str, Any]):
+        self.axis_pts_ref = references[self.axis_pts_ref]
+        return super().resolve_references(references)
 
 
 @dataclass
@@ -75,16 +84,21 @@ class A2LAxisDescriptionResAxis(A2LAxisDescriptionComAxis):
     pass
 
 
+A2LCharacteristic = "Placeholder"
+
+
 @dataclass
 class DependentCharacteristic:
     formula: str
-    variables: list[str] = field(default_factory=list)
+    variables: list[A2LCharacteristic] = field(default_factory=list)
+
+    def resolve_references(self, references: dict[str, Any]):
+        self.variables = [references[variable] for variable in self.variables]
 
 
 @dataclass
-class VirtualCharacteristic:
-    formula: str
-    variables: list[str] = field(default_factory=list)
+class VirtualCharacteristic(DependentCharacteristic):
+    pass
 
 
 @dataclass
@@ -117,13 +131,18 @@ class A2LCharacteristicArray(A2LCharacteristicTypedefInternal):
 
 
 @dataclass
-class A2LCharactersiticAscii(A2LCharacteristicTypedefInternal):
+class A2LCharacteristicAscii(A2LCharacteristicTypedefInternal):
     size: int | None = None
 
 
 @dataclass
 class A2LCharacteristicCurve(A2LCharacteristicTypedefInternal):
     axis_descriptions: list[A2LAxisDescription] = field(default_factory=list)
+
+    def resolve_references(self, references: dict[str, Any]):
+        super().resolve_references(references)
+        for axis_description in self.axis_descriptions:
+            axis_description.resolve_references(references)
 
 
 @dataclass
@@ -152,10 +171,13 @@ class A2LCharacteristic:
     dependent_characteristic: DependentCharacteristic | None = None
     virtual_characteristic: VirtualCharacteristic | None = None
     model_link: str | None = None
-    matrix_dim: list[int] | None = None
 
     def resolve_references(self, references: dict[str, Any]):
         self.typedef.resolve_references(references)
+        if self.dependent_characteristic is not None:
+            self.dependent_characteristic.resolve_references(references)
+        if self.virtual_characteristic is not None:
+            self.virtual_characteristic.resolve_references(references)
 
 
 @dataclass
@@ -199,3 +221,8 @@ class A2LTypedefAxis:
     max_number_of_axis_points: int
     lower_limit: int
     upper_limit: int
+
+    def resolve_references(self, references: dict[str, Any]):
+        self.record_layout = references[self.record_layout]
+        self.compu_method = references[self.compu_method]
+        self.measurement = references[self.measurement]

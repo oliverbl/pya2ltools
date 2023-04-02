@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Self
 
 WHITESPACE_TOKENS = ["", " ", "\t", "\n"]
@@ -6,7 +7,7 @@ WHITESPACE_TOKENS = ["", " ", "\t", "\n"]
 class Tokens:
     def __init__(self, tokens: list[str]):
         self.tokens = tokens
-        self._index = 0
+        self._index = self._skip_comments_and_whitespaces(0)
 
     @staticmethod
     def split_and_preserve_delimiter(text: str, delimiter: str) -> list[str]:
@@ -18,16 +19,35 @@ class Tokens:
         return tokens[:-1]
 
     @staticmethod
-    def from_file(path: str) -> Self:
+    def get_left_and_right_whitespaces(text: str) -> tuple[str, str]:
+        left = []
+        right = []
+        i = 0
+        while i < len(text) and text[i] in WHITESPACE_TOKENS:
+            left += text[i]
+            i += 1
+        i = 0
+        text = text.lstrip()
+        while i < len(text) and text[-1 - i] in WHITESPACE_TOKENS:
+            right += text[-1 - i]
+            i += 1
+        return left, right[::-1]
+
+    @staticmethod
+    def from_file(path: Path | str) -> Self:
+        if isinstance(path, str):
+            path = Path(path)
         tokens = []
         with path.open("r", encoding="utf-8-sig") as f:
-            lines = f.readlines()
+            lines: list[str] = f.readlines()
         for line in lines:
+            left, right = Tokens.get_left_and_right_whitespaces(line)
+            tokens += left
             temp = line.strip()
             temp = Tokens.split_and_preserve_delimiter(temp, delimiter="//")
             for t in temp:
                 tokens += Tokens.split_and_preserve_delimiter(t, delimiter=" ")
-            tokens += ["\n"]
+            tokens += right
         return Tokens(tokens)
 
     def _skip_comments_and_whitespaces(self, index) -> int:
@@ -77,8 +97,8 @@ class Tokens:
             if self.tokens[self._index + i : end] == search_tokens:
                 tokens = self.tokens[self._index : end]
                 self._index = self._skip_comments_and_whitespaces(end)
-                return tokens
+                return tokens[:-3]
         return None
 
     def __str__(self):
-        return str(self.tokens[self._index : self._index + 10])
+        return str(self.tokens[self._index : self._index + 30])

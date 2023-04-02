@@ -27,7 +27,7 @@ class A2LCompuMethodLinear(A2LCompuMethod):
 @dataclass
 class A2LCompuMethodFormula(A2LCompuMethod):
     formula: str = ""
-    formula_inv: str = ""
+    formula_inv: str = None
 
 
 @dataclass
