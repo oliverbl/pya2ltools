@@ -106,8 +106,13 @@ class A2LTransformer:
     timeout_in_ms: int
     event: str
     reverse_transformer: str | Self
-    in_objects: list[str] = field(default_factory=list)
-    out_objects: list[str] = field(default_factory=list)
+    in_objects: list[Any] = field(default_factory=list)
+    out_objects: list[Any] = field(default_factory=list)
+
+    def resolve_references(self, references: dict[str, Any]):
+        self.reverse_transformer = references[self.reverse_transformer]
+        self.in_objects = [references[obj] for obj in self.in_objects]
+        self.out_objects = [references[obj] for obj in self.out_objects]
 
 
 @dataclass

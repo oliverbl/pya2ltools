@@ -83,8 +83,13 @@ def parse_with_lexer(
     while tokens[0] != "/end" or tokens[1] != name:
         func = lexer.get(tokens[0], None)
         if func is None:
-            print(tokens[:20])
+            print(tokens[:30])
             raise Exception(f"Unknown token {tokens[0]} when parsing {name}")
         key_value, tokens = func(tokens)
         add_key_values(key_value, params)
     return tokens[2:]
+
+
+def format_hex(value: int) -> str:
+    # return f"0x{value:08X}"
+    return "0x" + hex(value).upper()[2:]

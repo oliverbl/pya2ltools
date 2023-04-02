@@ -60,7 +60,7 @@ from ..model.characteristic_model import (
     A2LCharacteristicMap,
     A2LCharacteristicTypedef,
     A2LCharacteristicValue,
-    A2LCharactersiticAscii,
+    A2LCharacteristicAscii,
     A2LMeasurement,
     A2LTypedefAxis,
     DependentCharacteristic,
@@ -69,6 +69,7 @@ from ..model.characteristic_model import (
 )
 
 from ..model.project_model import (
+    A2ML,
     A2LFunction,
     A2LGroup,
     A2LHeader,
@@ -86,7 +87,7 @@ from ..model.mod_par_model import (
 def a2ml(tokens: Tokens) -> Tuple[dict, list[str]]:
     content = tokens.return_tokens_until("/end A2ML")
     content = "".join(content)
-    return {"a2ml": [content]}, tokens
+    return {"a2ml": [A2ML(content)]}, tokens
 
 
 def project(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -118,7 +119,7 @@ def header(tokens: list[str]) -> Tuple[dict, list[str]]:
     params["description"], tokens = parse_string(tokens)
 
     def version(tokens: list[str]) -> Tuple[dict, list[str]]:
-        version, tokens = parse_string(tokens)
+        version, tokens = parse_string(tokens[1:])
         return {"version": version}, tokens
 
     lexer: Lexer = {
@@ -139,7 +140,7 @@ def group(tokens: list[str]) -> Tuple[dict, list[str]]:
     params["description"], tokens = parse_string(tokens[1:])
 
     lexer = {
-        "ROOT": lambda x: ({}, x[1:]),
+        "ROOT": lambda x: ({"root": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
         "SUB_GROUP": functools.partial(
             parse_members, field="sub_groups", name="SUB_GROUP"
@@ -300,15 +301,14 @@ def if_data(tokens: Tokens) -> Tuple[dict, list[str]]:
 
     params = {}
     params["name"] = tokens[0]
-    tokens = tokens[1:]
-    params["content"] = tokens.return_tokens_until("/end IF_DATA")
+    params["content"] = tokens.return_tokens_until("/end IF_DATA")[1:]
     return {"if_data": [A2LIfData(**params)]}, tokens
 
 
 def memory_segment(tokens: list[str]) -> Tuple[dict, list[str]]:
     params = {}
-    params["name"] = tokens[0]
-    params["description"], tokens = parse_string(tokens[1:])
+    params["name"] = tokens[1]
+    params["description"], tokens = parse_string(tokens[2:])
     params["program_type"] = tokens[0]
     params["memory_type"] = tokens[1]
     params["location"] = tokens[2]
@@ -550,8 +550,8 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
 
     params["datatype"] = tokens[0]
     params["compu_method"] = tokens[1]
-    # tokens[2] = ?
-    # tokens[3] = ?
+    params["offset_1"] = tokens[2]
+    params["offset_2"] = tokens[3]
     params["min"] = parse_number(tokens[4])
     params["max"] = parse_number(tokens[5])
 
@@ -565,12 +565,17 @@ def measurement(tokens: list[str]) -> Tuple[Any, list[str]]:
             tokens = tokens[1:]
         return {"virtual": VirtualMeasurement(variables)}, tokens[2:]
 
+    def format(tokens: list[str]) -> Tuple[Any, list[str]]:
+        tokens = tokens[1:]
+        f, tokens = parse_string(tokens)
+        return {"format": f}, tokens
+
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
             {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
             x[3:],
         ),
-        "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
+        "FORMAT": format,
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
         "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
@@ -684,14 +689,14 @@ def parse_annotation(tokens: list[str]) -> Tuple[Any, list[str]]:
         "ANNOTATION_ORIGIN": lambda x: functools.partial(parse_s, field="origin")(
             x[1:]
         ),
-        "ANNOTATION_TEXT": parse_annotation_text,
+        "ANNOTATION_TEXT": lambda x: parse_annotation_text(x[1:]),
         "/begin": lambda x: ({}, x[1:]),
     }
 
     tokens = parse_with_lexer(
         lexer=lexer, name="ANNOTATION", tokens=tokens, params=params
     )
-    return {"annotations": A2LAnnotation(**params)}, tokens
+    return {"annotations": [A2LAnnotation(**params)]}, tokens
 
 
 def parse_axis_descr(tokens: list[str]) -> Tuple[dict, list[str]]:
@@ -756,7 +761,7 @@ def characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     char_types = {
         "VALUE": (A2LCharacteristicValue, []),
         "VAL_BLK": (A2LCharacteristicArray, ["MATRIX_DIM"]),
-        "ASCII": (A2LCharactersiticAscii, ["NUMBER"]),
+        "ASCII": (A2LCharacteristicAscii, ["NUMBER"]),
         "CURVE": (A2LCharacteristicCurve, ["AXIS_DESCR"]),
         "MAP": (A2LCharacteristicMap, ["AXIS_DESCR"]),
         "CUBOID": (A2LCharacteristicCuboid, ["AXIS_DESCR"]),
@@ -850,7 +855,7 @@ def typedef_characteristic(tokens: list[str]) -> Tuple[Any, list[str]]:
     char_types = {
         "VALUE": (A2LCharacteristicValue, []),
         "VAL_BLK": (A2LCharacteristicArray, ["MATRIX_DIM"]),
-        "ASCII": (A2LCharactersiticAscii, ["NUMBER"]),
+        "ASCII": (A2LCharacteristicAscii, ["NUMBER"]),
         "CURVE": (A2LCharacteristicCurve, ["AXIS_DESCR"]),
         "MAP": (A2LCharacteristicMap, ["AXIS_DESCR"]),
         "CUBOID": (A2LCharacteristicCuboid, ["AXIS_DESCR"]),
