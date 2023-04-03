@@ -145,6 +145,9 @@ class Tokens:
     def get(self, index: int) -> Token:
         return self.tokens[self._index + index]
 
+    def get_keyword(self, index: int) -> Token:
+        return self.tokens[self._find_next_index(index)]
+
     def get_pos(self, index: int) -> Token:
         token = self.tokens[self._index + index]
         return f"Line: {token.line}, Pos: {token.pos}, File: {self.filepath}"
@@ -172,4 +175,11 @@ class InvalidKeywordError(Exception):
     def __init__(self, invalid_keyword: str, name: str, token: Token):
         super().__init__(
             f"Invalid keyword {invalid_keyword} when parsing {name} at {token.location}"
+        )
+
+
+class InvalidTypeError(Exception):
+    def __init__(self, expected_type: str, token: Token):
+        super().__init__(
+            f"Invalid type {token.content}, expected {expected_type} at {token.location}"
         )
