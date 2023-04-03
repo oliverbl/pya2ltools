@@ -1,6 +1,6 @@
 from typing import Any, Callable, Tuple
 
-from .token import Tokens, UnknownTokenError
+from .token import InvalidTypeError, Token, Tokens, UnknownTokenError
 
 Number = float | int
 
@@ -13,17 +13,27 @@ def is_number(s: str) -> bool:
         return False
 
 
-def parse_number(s: str) -> Number:
-    if s.startswith("0x"):
-        return int(s, 16)
-    if s.startswith("0b"):
-        return int(s, 2)
-    if s.startswith("0o"):
-        return int(s, 8)
+def parse_number(token: Token | str) -> Number:
+    if isinstance(token, Token):
+        s = token.content
+    else:
+        s = token
     try:
+        if s.startswith("0x"):
+            return int(s, 16)
+        if s.startswith("0b"):
+            return int(s, 2)
+        if s.startswith("0o"):
+            return int(s, 8)
         return int(s)
     except ValueError:
+        pass
+    try:
         return float(s)
+    except ValueError as e:
+        if isinstance(token, Token):
+            raise InvalidTypeError(expected_type="number", token=token)
+        raise e
 
 
 def parse_string(tokens: list[str]) -> Tuple[str, list[str]]:
@@ -51,10 +61,10 @@ def parse_members(tokens: list[str], field: str, name: str) -> Tuple[dict, list[
     return {field: members}, tokens[2:]
 
 
-def parse_list_of_numbers(tokens: list[str]) -> Tuple[list[int], list[str]]:
+def parse_list_of_numbers(tokens: Tokens) -> Tuple[list[int], Tokens]:
     numbers = []
     while is_number(tokens[0]):
-        numbers.append(parse_number(tokens[0]))
+        numbers.append(parse_number(tokens.get_keyword(0)))
         tokens = tokens[1:]
     return numbers, tokens
 

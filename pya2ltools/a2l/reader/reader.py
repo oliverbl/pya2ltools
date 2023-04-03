@@ -170,7 +170,7 @@ def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["version"], tokens = parse_string(tokens[1:])
     params["name_32bit_dll"], tokens = parse_string(tokens)
     params["name_64bit_dll"], tokens = parse_string(tokens)
-    params["timeout_in_ms"] = parse_number(tokens[0])
+    params["timeout_in_ms"] = parse_number(tokens.get_keyword(0))
     params["event"] = tokens[1]
     params["reverse_transformer"] = tokens[2]
     tokens = tokens[3:]
@@ -197,8 +197,8 @@ def blob(tokens: Tokens) -> Tuple[dict, Tokens]:
     params = {}
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
-    params["ecu_address"] = parse_number(tokens[0])
-    params["number_of_bytes"] = parse_number(tokens[1])
+    params["ecu_address"] = parse_number(tokens.get_keyword(0))
+    params["number_of_bytes"] = parse_number(tokens.get_keyword(1))
     tokens = tokens[2:]
     lexer = {
         "CALIBRATION_ACCESS": lambda x: ({"calibration_access": x[1]}, x[2:]),
@@ -215,14 +215,14 @@ def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
     params = {}
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
-    params["size"] = parse_number(tokens[0])
+    params["size"] = parse_number(tokens.get_keyword(0))
     tokens = tokens[1:]
 
     def structure_component(tokens: Tokens) -> Tuple[dict, Tokens]:
         params = {}
         params["name"] = tokens[0]
         params["datatype"] = tokens[1]
-        params["offset"] = parse_number(tokens[2])
+        params["offset"] = parse_number(tokens.get_keyword(2))
         if tokens[3] == "MATRIX_DIM":
             params2, tokens = parse_matrix_dim(tokens[3:])
             params.update(params2)
@@ -249,11 +249,11 @@ def typedef_axis(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["description"], tokens = parse_string(tokens[1:])
     params["measurement"] = tokens[0]
     params["record_layout"] = tokens[1]
-    params["max_diff"] = parse_number(tokens[2])
+    params["max_diff"] = parse_number(tokens.get_keyword(2))
     params["compu_method"] = tokens[3]
-    params["max_number_of_axis_points"] = parse_number(tokens[4])
-    params["lower_limit"] = parse_number(tokens[5])
-    params["upper_limit"] = parse_number(tokens[6])
+    params["max_number_of_axis_points"] = parse_number(tokens.get_keyword(4))
+    params["lower_limit"] = parse_number(tokens.get_keyword(5))
+    params["upper_limit"] = parse_number(tokens.get_keyword(6))
     tokens = tokens[9:]
     return {"typedef_axes": [A2LTypedefAxis(**params)]}, tokens
 
@@ -312,8 +312,8 @@ def memory_segment(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["program_type"] = tokens[0]
     params["memory_type"] = tokens[1]
     params["location"] = tokens[2]
-    params["address"] = parse_number(tokens[3])
-    params["size"] = parse_number(tokens[4])
+    params["address"] = parse_number(tokens.get_keyword(3))
+    params["size"] = parse_number(tokens.get_keyword(4))
     params["offsets"], tokens = parse_list_of_numbers(tokens[5:])
 
     lexer = {"/begin": lambda x: ({}, x[1:]), "IF_DATA": if_data}
@@ -337,7 +337,7 @@ def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     lexer = {
         "NO_OF_INTERFACES": lambda x: (
-            {"number_of_interfaces": parse_number(x[1])},
+            {"number_of_interfaces": parse_number(x.get_keyword(1))},
             x[2:],
         ),
         "/begin": lambda x: ({}, x[1:]),
@@ -359,15 +359,24 @@ def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
     lexer = {
         "DEPOSIT": lambda x: ({"deposit": x[1]}, x[2:]),
         "BYTE_ORDER": lambda x: ({"byte_order": ByteOrder(x[1])}, x[2:]),
-        "ALIGNMENT_BYTE": lambda x: ({"alignment_byte": parse_number(x[1])}, x[2:]),
-        "ALIGNMENT_WORD": lambda x: ({"alignment_word": parse_number(x[1])}, x[2:]),
-        "ALIGNMENT_LONG": lambda x: ({"alignment_long": parse_number(x[1])}, x[2:]),
+        "ALIGNMENT_BYTE": lambda x: (
+            {"alignment_byte": parse_number(x.get_keyword(1))},
+            x[2:],
+        ),
+        "ALIGNMENT_WORD": lambda x: (
+            {"alignment_word": parse_number(x.get_keyword(1))},
+            x[2:],
+        ),
+        "ALIGNMENT_LONG": lambda x: (
+            {"alignment_long": parse_number(x.get_keyword(1))},
+            x[2:],
+        ),
         "ALIGNMENT_FLOAT32_IEEE": lambda x: (
-            {"alignment_float32_ieee": parse_number(x[1])},
+            {"alignment_float32_ieee": parse_number(x.get_keyword(1))},
             x[2:],
         ),
         "ALIGNMENT_FLOAT64_IEEE": lambda x: (
-            {"alignment_float64_ieee": parse_number(x[1])},
+            {"alignment_float64_ieee": parse_number(x.get_keyword(1))},
             x[2:],
         ),
     }
@@ -384,17 +393,17 @@ def tab_intp(tokens: Tokens) -> Tuple[Any, Tokens]:
         tokens = tokens[2:]
     else:
         values = {}
-        size = parse_number(tokens[0])
+        size = parse_number(tokens.get_keyword(0))
         tokens = tokens[1:]
         for _ in range(size):
-            x = parse_number(tokens[0])
-            y = parse_number(tokens[1])
+            x = parse_number(tokens.get_keyword(0))
+            y = parse_number(tokens.get_keyword(1))
             values[x] = y
             tokens = tokens[2:]
         params["values"] = values
 
     if tokens[0] == "DEFAULT_VALUE_NUMERIC":
-        params["default_value"] = parse_number(tokens[1])
+        params["default_value"] = parse_number(tokens.get_keyword(1))
         tokens = tokens[2:]
 
     return params, tokens[2:]
@@ -484,11 +493,11 @@ def compu_vtab(tokens: Tokens) -> Tuple[Any, Tokens]:
         raise Exception("TAB_VERB expected, got " + tokens[0])
 
     tokens = tokens[1:]
-    size = parse_number(tokens[0])
+    size = parse_number(tokens.get_keyword(0))
     tokens = tokens[1:]
     values = {}
     for _ in range(size):
-        val = parse_number(tokens[0])
+        val = parse_number(tokens.get_keyword(0))
         name, tokens = parse_string(tokens[1:])
         values[val] = name
     params["values"] = values
@@ -509,12 +518,12 @@ def compu_vtab_range(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
-    size = parse_number(tokens[0])
+    size = parse_number(tokens.get_keyword(0))
     tokens = tokens[1:]
     values = {}
     for _ in range(size):
-        min = parse_number(tokens[0])
-        max = parse_number(tokens[1])
+        min = parse_number(tokens.get_keyword(0))
+        max = parse_number(tokens.get_keyword(1))
         name, tokens = parse_string(tokens[2:])
         values[(min, max)] = name
     params["values"] = values
@@ -535,7 +544,7 @@ def parse_matrix_dim(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     tokens = tokens[1:]
     while is_number(tokens[0]):
-        dimensions.append(parse_number(tokens[0]))
+        dimensions.append(parse_number(tokens.get_keyword(0)))
         tokens = tokens[1:]
 
     return {"matrix_dim": dimensions}, tokens
@@ -554,8 +563,8 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["compu_method"] = tokens[1]
     params["offset_1"] = tokens[2]
     params["offset_2"] = tokens[3]
-    params["min"] = parse_number(tokens[4])
-    params["max"] = parse_number(tokens[5])
+    params["min"] = parse_number(tokens.get_keyword(4))
+    params["max"] = parse_number(tokens.get_keyword(5))
 
     tokens = tokens[6:]
 
@@ -574,22 +583,28 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
+            {
+                "extended_min": parse_number(x.get_keyword(1)),
+                "extended_max": parse_number(x.get_keyword(2)),
+            },
             x[3:],
         ),
         "FORMAT": format,
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x.get_keyword(1))}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
         "ECU_ADDRESS_EXTENSION": lambda x: (
-            {"ecu_address_extension": parse_number(x[1])},
+            {"ecu_address_extension": parse_number(x.get_keyword(1))},
             x[2:],
         ),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
         "MATRIX_DIM": lambda x: parse_matrix_dim(x),
         "ANNOTATION": lambda x: parse_annotation(x),
-        "ECU_ADDRESS": lambda x: ({"ecu_address": parse_number(x[1])}, x[2:]),
+        "ECU_ADDRESS": lambda x: (
+            {"ecu_address": parse_number(x.get_keyword(1))},
+            x[2:],
+        ),
         "IF_DATA": if_data,
         "VIRTUAL": lambda x: virtual_measurement(x),
     }
@@ -611,7 +626,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     def fnc_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
-        params["position"] = parse_number(tokens[1])
+        params["position"] = parse_number(tokens.get_keyword(1))
         params["datatype"] = tokens[2]
         params["index_mode"] = tokens[3]
         params["addressing_mode"] = tokens[4]
@@ -620,7 +635,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     def axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
-        params["position"] = parse_number(tokens[1])
+        params["position"] = parse_number(tokens.get_keyword(1))
         params["datatype"] = tokens[2]
         params["index_mode"] = tokens[3]
         params["addressing_mode"] = tokens[4]
@@ -629,9 +644,9 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     def rescale_axis(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
-        params["position"] = parse_number(tokens[1])
+        params["position"] = parse_number(tokens.get_keyword(1))
         params["datatype"] = tokens[2]
-        params["map_position"] = parse_number(tokens[3])
+        params["map_position"] = parse_number(tokens.get_keyword(3))
         params["index_mode"] = tokens[4]
         params["addressing_mode"] = tokens[5]
         return {"fields": [A2lLRescaleAxis(**params)]}, tokens[6:]
@@ -639,7 +654,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     def no_axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
         params = {}
         params["axis"] = tokens[0]
-        params["position"] = parse_number(tokens[1])
+        params["position"] = parse_number(tokens.get_keyword(1))
         params["datatype"] = tokens[2]
         return {"fields": [A2LRecordLayoutNoAxisPts(**params)]}, tokens[3:]
 
@@ -721,9 +736,9 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
     params = {}
     params["measurement"] = tokens[1]
     params["compu_method"] = tokens[2]
-    params["size"] = parse_number(tokens[3])
-    params["min"] = parse_number(tokens[4])
-    params["max"] = parse_number(tokens[5])
+    params["size"] = parse_number(tokens.get_keyword(3))
+    params["min"] = parse_number(tokens.get_keyword(4))
+    params["max"] = parse_number(tokens.get_keyword(5))
 
     tokens = tokens[6:]
 
@@ -777,12 +792,12 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     char_type, expected_keywords = char_types[characteristic_type]
 
-    params["ecu_address"] = parse_number(tokens[1])
+    params["ecu_address"] = parse_number(tokens.get_keyword(1))
     params["record_layout"] = tokens[2]
-    params["maxdiff"] = parse_number(tokens[3])
+    params["maxdiff"] = parse_number(tokens.get_keyword(3))
     params["compu_method"] = tokens[4]
-    params["min"] = parse_number(tokens[5])
-    params["max"] = parse_number(tokens[6])
+    params["min"] = parse_number(tokens.get_keyword(5))
+    params["max"] = parse_number(tokens.get_keyword(6))
 
     tokens = tokens[7:]
 
@@ -810,16 +825,19 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
+            {
+                "extended_min": parse_number(x.get_keyword(1)),
+                "extended_max": parse_number(x.get_keyword(2)),
+            },
             x[3:],
         ),
         "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
-        "NUMBER": lambda x: ({"size": parse_number(x[1])}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x.get_keyword(1))}, x[2:]),
+        "NUMBER": lambda x: ({"size": parse_number(x.get_keyword(1))}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
         "ECU_ADDRESS_EXTENSION": lambda x: (
-            {"ecu_address_extension": parse_number(x[1])},
+            {"ecu_address_extension": parse_number(x.get_keyword(1))},
             x[2:],
         ),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
@@ -890,22 +908,25 @@ def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     char_type, expected_keywords = char_types[characteristic_type]
 
     params["record_layout"] = tokens[1]
-    params["maxdiff"] = parse_number(tokens[2])
+    params["maxdiff"] = parse_number(tokens.get_keyword(2))
     params["compu_method"] = tokens[3]
-    params["min"] = parse_number(tokens[4])
-    params["max"] = parse_number(tokens[5])
+    params["min"] = parse_number(tokens.get_keyword(4))
+    params["max"] = parse_number(tokens.get_keyword(5))
 
     tokens = tokens[6:]
 
     lexer = {
         "EXTENDED_LIMITS": lambda x: (
-            {"extended_min": parse_number(x[1]), "extended_max": parse_number(x[2])},
+            {
+                "extended_min": parse_number(x.get_keyword(1)),
+                "extended_max": parse_number(x.get_keyword(2)),
+            },
             x[3:],
         ),
         "FORMAT": lambda x: ({"format": x[1]}, x[2:]),
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
-        "BIT_MASK": lambda x: ({"bitmask": parse_number(x[1])}, x[2:]),
-        "NUMBER": lambda x: ({"size": parse_number(x[1])}, x[2:]),
+        "BIT_MASK": lambda x: ({"bitmask": parse_number(x.get_keyword(1))}, x[2:]),
+        "NUMBER": lambda x: ({"size": parse_number(x.get_keyword(1))}, x[2:]),
         "PHYS_UNIT": lambda x: ({"phys_unit": x[1]}, x[2:]),
         "DISCRETE": lambda x: ({"discrete": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
@@ -935,7 +956,7 @@ def instance(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
     params["reference"] = tokens[0]
-    params["ecu_address"] = parse_number(tokens[1])
+    params["ecu_address"] = parse_number(tokens.get_keyword(1))
     lexer = {
         "MATRIX_DIM": parse_matrix_dim,
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
@@ -955,14 +976,14 @@ def axis_pts(tokens: Tokens) -> Tuple[Any, Tokens]:
     params = {}
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
-    params["ecu_address"] = parse_number(tokens[0])
+    params["ecu_address"] = parse_number(tokens.get_keyword(0))
     params["measurement"] = tokens[1]
     params["record_layout"] = tokens[2]
-    params["offset"] = parse_number(tokens[3])
+    params["offset"] = parse_number(tokens.get_keyword(3))
     params["compu_method"] = tokens[4]
-    params["max_number_sample_points"] = parse_number(tokens[5])
-    params["min"] = parse_number(tokens[6])
-    params["max"] = parse_number(tokens[7])
+    params["max_number_sample_points"] = parse_number(tokens.get_keyword(5))
+    params["min"] = parse_number(tokens.get_keyword(6))
+    params["max"] = parse_number(tokens.get_keyword(7))
     tokens = tokens[8:]
 
     lexer = {
