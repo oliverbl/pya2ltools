@@ -1,5 +1,7 @@
 from typing import Any, Callable, Tuple
 
+from .token import Tokens, UnknownTokenError
+
 Number = float | int
 
 
@@ -78,13 +80,22 @@ def add_key_values(key_value: dict, params: dict) -> None:
 
 
 def parse_with_lexer(
-    lexer: Lexer, name: str, params: dict[str, Any], tokens: list[str]
-) -> list[str]:
-    while tokens[0] != "/end" or tokens[1] != name:
+    lexer: Lexer,
+    params: dict[str, Any],
+    tokens: Tokens,
+    name: str = None,
+    found_keywords: list[str] = None,
+    end_condition: Callable[[Tokens], bool] = None,
+) -> Tokens:
+    if end_condition is None:
+        end_condition = lambda t: t[0] == "/end" and t[1] == name
+
+    while not end_condition(tokens):
         func = lexer.get(tokens[0], None)
         if func is None:
-            print(tokens[:30])
-            raise Exception(f"Unknown token {tokens[0]} when parsing {name}")
+            raise UnknownTokenError(tokens.get(0), expected=lexer.keys())
+        if found_keywords is not None:
+            found_keywords.append(tokens[0])
         key_value, tokens = func(tokens)
         add_key_values(key_value, params)
     return tokens[2:]

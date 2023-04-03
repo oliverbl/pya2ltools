@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self
+from typing import Iterable, Self
 
 WHITESPACE_TOKENS = ["", " ", "\t", "\n"]
 
@@ -151,9 +151,25 @@ class Tokens:
 
 
 class UnknownTokenError(Exception):
-    def __init__(self, token: Token, expected: str = None):
-        if expected is not None:
-            expected = f", expected: {expected}"
-        else:
+    def __init__(self, token: Token, expected: str | list[str] = None):
+        if expected is None:
             expected = ""
+        elif isinstance(expected, str):
+            expected = f", expected: {expected}"
+        elif isinstance(expected, Iterable):
+            expected = f", expected one of: {' | '.join(expected)}"
         super().__init__(f"Unknown token {token.content}{expected} at {token.location}")
+
+
+class MissingKeywordError(Exception):
+    def __init__(self, missing_keyword: str, name: str, token: Token):
+        super().__init__(
+            f"Expected keyword {missing_keyword} when parsing {name} at {token.location}"
+        )
+
+
+class InvalidKeywordError(Exception):
+    def __init__(self, invalid_keyword: str, name: str, token: Token):
+        super().__init__(
+            f"Invalid keyword {invalid_keyword} when parsing {name} at {token.location}"
+        )
