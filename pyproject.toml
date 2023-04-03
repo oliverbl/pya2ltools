@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pya2ltools"
+version = "0.1.0"
+description = ""
+authors = ["Oliver Blasius <oliver.blasius@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyelftools = {git = "https://github.com/eliben/pyelftools"}
+dataclasses-json = "^0.5.7"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.test.dependencies]
+parameterized = "^0.9.0"
+coverage = "^7.2.2"
