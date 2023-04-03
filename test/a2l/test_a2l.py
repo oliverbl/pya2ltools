@@ -9,8 +9,13 @@ class TestA2l(unittest.TestCase):
         path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171.a2l"
         output = Path("a2l_out.a2l")
         a2l_file = read_a2l(path)
-        # write_a2l_file(a2l_file, output)
-        # a2l_file_new = read_a2l(output)
+        write_a2l_file(a2l_file, output)
+        a2l_file_new = read_a2l(output)
+        write_a2l_file(a2l_file_new, Path("a2l_out2.a2l"))
+
+        with output.open("r") as f:
+            with Path("a2l_out2.a2l").open("r") as f2:
+                self.assertEqual(f.read(), f2.read())
 
         # for i, m in enumerate(a2l_file.project.modules[0].global_list):
         #     m_new = a2l_file_new.project.modules[0].global_list[i]
