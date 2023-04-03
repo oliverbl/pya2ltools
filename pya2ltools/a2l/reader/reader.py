@@ -5,7 +5,7 @@ import functools
 
 from .dict_with_index import DictWithIndex
 
-from .token import Tokens, UnknownTokenError
+from .token import InvalidKeywordError, MissingKeywordError, Tokens, UnknownTokenError
 
 from ..model.compu_methods import (
     A2LCompuMethod,
@@ -450,7 +450,9 @@ def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
             "FORMULA": formula,
             "COMPU_TAB_REF": lambda x: ({"compu_tab_ref": x[1]}, x[2:]),
         }
-        tokens = parse_with_lexer(lexer, "COMPU_METHOD", params, tokens)
+        tokens = parse_with_lexer(
+            lexer=lexer, name="COMPU_METHOD", params=params, tokens=tokens
+        )
     class_ = compu_method_types[compu_method_type]
     return {"compu_methods": [class_(**params)]}, tokens
 
@@ -749,8 +751,7 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
 
 
 def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
-    if tokens[0] != "CHARACTERISTIC":
-        raise Exception("CHARACTERISTIC expected, got " + tokens[0])
+    type_token = tokens.get(0)
 
     params = {}
     params["name"] = tokens[1]
@@ -771,7 +772,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     if not characteristic_type in char_types:
         raise UnknownTokenError(
             tokens.get(0),
-            expected="VALUE | VAL_BLK | ASCII | CURVE | MAP | CUBOID | CUBE_4",
+            expected=char_types.keys(),
         )
 
     char_type, expected_keywords = char_types[characteristic_type]
@@ -831,9 +832,24 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
         "MODEL_LINK": lambda x: ({"model_link": x[1]}, x[2:]),
     }
 
+    found_keywords = []
+
     tokens = parse_with_lexer(
-        lexer=lexer, name="CHARACTERISTIC", tokens=tokens, params=params
+        lexer=lexer,
+        name="CHARACTERISTIC",
+        tokens=tokens,
+        params=params,
+        found_keywords=found_keywords,
     )
+
+    for e in expected_keywords:
+        if e not in found_keywords:
+            raise MissingKeywordError(e, "CHARACTERISTIC", type_token)
+    for v in char_types.values():
+        _, keywords = v
+        for k in keywords:
+            if k not in expected_keywords and k in found_keywords:
+                raise InvalidKeywordError(k, "CHARACTERISTIC", type_token)
 
     field_names = [field.name for field in fields(char_type)]
     char_type_params = {k: v for k, v in params.items() if k in field_names}
@@ -1015,12 +1031,8 @@ def read_a2l(path: Path) -> A2lFile:
     }
 
     params = {}
-    while len(tokens) != 0:
-        func = lexer.get(tokens[0], None)
-        if func is None:
-            print(tokens[:20])
-            raise Exception(f"Unknown token {tokens[0]}")
-        key_value, tokens = func(tokens)
-        add_key_values(key_value, params)
+    parse_with_lexer(
+        lexer=lexer, tokens=tokens, params=params, end_condition=lambda x: len(x) == 0
+    )
 
     return A2lFile(**params)
