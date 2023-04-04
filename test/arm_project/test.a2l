@@ -1,0 +1,35 @@
+ASAP2_VERSION 1 71
+/begin PROJECT ASAP2_Example ""
+
+
+
+    /begin MODULE Example ""
+    
+    /begin RECORD_LAYOUT _UBYTE
+        FNC_VALUES 1 UBYTE ROW_DIR DIRECT
+    /end RECORD_LAYOUT
+
+    /begin CHARACTERISTIC someA.a
+        "Test"
+        VALUE
+        0x0
+        _UBYTE
+        0
+        NO_COMPU_METHOD
+        0 255
+        DISPLAY_IDENTIFIER SomeIdentifier
+    /end CHARACTERISTIC
+
+    /begin CHARACTERISTIC someA.b
+        "Test"
+        VALUE
+        0x1
+        _UBYTE
+        0
+        NO_COMPU_METHOD
+        0 255
+        DISPLAY_IDENTIFIER SomeIdentifierB
+    /end CHARACTERISTIC
+
+    /end MODULE
+/end PROJECT

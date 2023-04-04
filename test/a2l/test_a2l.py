@@ -35,7 +35,6 @@ class TestA2l(unittest.TestCase):
             print(e)
             self.assertTrue(True)
 
-
     def tearDownClass() -> None:
         Path("a2l_out.a2l").unlink()
         Path("a2l_out2.a2l").unlink()

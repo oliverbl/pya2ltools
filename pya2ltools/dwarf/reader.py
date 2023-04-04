@@ -7,11 +7,11 @@ from dataclasses import dataclass, field
 from .model import DwarfVariable
 
 
-def str_to_variable_path(path: str) -> list[str | int]:
+def str_to_variable_path(var: str) -> list[str | int]:
     path: list[str | int] = []
     # split variable_path by . and [] and return list of strings and indexes between []
     # e.g. "a.b[0].c" -> ["a", "b", 0, "c"]
-    for part in re.split(r"(\[|\]|\.)", path):
+    for part in re.split(r"(\[|\]|\.)", var):
         if part == ".":
             continue
         if part == "[":
@@ -54,7 +54,7 @@ class DwarfInfo:
 
     def get_address_by_variable_path(self, variable_path: str) -> int:
         path = str_to_variable_path(variable_path)
-        var = self.variables[path[0]]
+        var = self.variables[path[0]][0]
         address = var.location
         for part in path[1:]:
             if isinstance(part, int):
