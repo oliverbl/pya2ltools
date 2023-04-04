@@ -5,7 +5,7 @@ import functools
 
 from .dict_with_index import DictWithIndex
 
-from .token import InvalidKeywordError, MissingKeywordError, Tokens, UnknownTokenError
+from .token import InvalidKeywordError, MissingKeywordError, Lexer, UnknownTokenError
 
 from ..model.compu_methods import (
     A2LCompuMethod,
@@ -84,13 +84,13 @@ from ..model.mod_par_model import (
 )
 
 
-def a2ml(tokens: Tokens) -> Tuple[dict, Tokens]:
+def a2ml(tokens: Lexer) -> Tuple[dict, Lexer]:
     content = tokens.return_tokens_until("/end A2ML")
     content = "".join(content)
     return {"a2ml": [A2ML(content)]}, tokens
 
 
-def project(tokens: Tokens) -> Tuple[dict, Tokens]:
+def project(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "PROJECT":
         raise Exception("PROJECT expected, got " + tokens[0] + "")
 
@@ -111,14 +111,14 @@ def project(tokens: Tokens) -> Tuple[dict, Tokens]:
     )
 
 
-def header(tokens: Tokens) -> Tuple[dict, Tokens]:
+def header(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "HEADER":
         raise Exception("HEADER expected")
     tokens = tokens[1:]
     params = {}
     params["description"], tokens = parse_string(tokens)
 
-    def version(tokens: Tokens) -> Tuple[dict, Tokens]:
+    def version(tokens: Lexer) -> Tuple[dict, Lexer]:
         version, tokens = parse_string(tokens[1:])
         return {"version": version}, tokens
 
@@ -130,7 +130,7 @@ def header(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"header": A2LHeader(**params)}, tokens
 
 
-def group(tokens: Tokens) -> Tuple[dict, Tokens]:
+def group(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "GROUP":
         raise Exception("GROUP expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -160,7 +160,7 @@ def group(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"groups": [A2LGroup(**params)]}, tokens
 
 
-def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
+def transformer(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "TRANSFORMER":
         raise Exception("TRANSFORMER expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -189,7 +189,7 @@ def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"transformers": [A2LTransformer(**params)]}, tokens
 
 
-def blob(tokens: Tokens) -> Tuple[dict, Tokens]:
+def blob(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "BLOB":
         raise Exception("BLOB expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -207,7 +207,7 @@ def blob(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"blobs": [A2LBlob(**params)]}, tokens
 
 
-def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
+def typedef_structure(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "TYPEDEF_STRUCTURE":
         raise Exception("TYPEDEF_STRUCTURE expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -218,7 +218,7 @@ def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["size"] = parse_number(tokens.get_keyword(0))
     tokens = tokens[1:]
 
-    def structure_component(tokens: Tokens) -> Tuple[dict, Tokens]:
+    def structure_component(tokens: Lexer) -> Tuple[dict, Lexer]:
         params = {}
         params["name"] = tokens[0]
         params["datatype"] = tokens[1]
@@ -240,7 +240,7 @@ def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"typedef_structures": [A2LStructure(**params)]}, tokens
 
 
-def typedef_axis(tokens: Tokens) -> Tuple[dict, Tokens]:
+def typedef_axis(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "TYPEDEF_AXIS":
         raise Exception("TYPEDEF_AXIS expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -258,7 +258,7 @@ def typedef_axis(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"typedef_axes": [A2LTypedefAxis(**params)]}, tokens
 
 
-def module(tokens: Tokens) -> Tuple[dict, Tokens]:
+def module(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "MODULE":
         raise Exception("MODULE expected, got " + tokens[0])
 
@@ -294,7 +294,7 @@ def module(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"modules": [A2LModule(**params, global_list=params.global_list)]}, tokens
 
 
-def if_data(tokens: Tokens) -> Tuple[dict, Tokens]:
+def if_data(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "IF_DATA":
         raise Exception("IF_DATA expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -305,7 +305,7 @@ def if_data(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"if_data": [A2LIfData(**params)]}, tokens
 
 
-def memory_segment(tokens: Tokens) -> Tuple[dict, Tokens]:
+def memory_segment(tokens: Lexer) -> Tuple[dict, Lexer]:
     params = {}
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
@@ -323,14 +323,14 @@ def memory_segment(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"memory_segments": [A2LMemorySegment(**params)]}, tokens
 
 
-def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
+def mod_par(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "MOD_PAR":
         raise Exception("MOD_PAR expected")
 
     params = {}
     params["description"], tokens = parse_string(tokens[1:])
 
-    def system_constant(tokens: Tokens) -> Tuple[dict, Tokens]:
+    def system_constant(tokens: Lexer) -> Tuple[dict, Lexer]:
         name, tokens = parse_string(tokens[1:])
         val, tokens = parse_string(tokens)
         return {"system_constants": {name: val}}, tokens
@@ -349,7 +349,7 @@ def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"mod_par": [A2LModPar(**params)]}, tokens
 
 
-def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
+def mod_common(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "MOD_COMMON":
         raise Exception("MOD_COMMON expected")
     tokens = tokens[1:]
@@ -386,7 +386,7 @@ def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"mod_common": [A2LModCommon(**params)]}, tokens
 
 
-def tab_intp(tokens: Tokens) -> Tuple[Any, Tokens]:
+def tab_intp(tokens: Lexer) -> Tuple[Any, Lexer]:
     params = {}
     if tokens[0] == "COMPU_TAB_REF":
         params["compu_tab_ref"] = tokens[1]
@@ -409,7 +409,7 @@ def tab_intp(tokens: Tokens) -> Tuple[Any, Tokens]:
     return params, tokens[2:]
 
 
-def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
+def compu_method(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "COMPU_METHOD":
         raise Exception("COMPU_METHOD expected, got " + tokens[0])
 
@@ -431,12 +431,12 @@ def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["format"], tokens = parse_string(tokens[1:])
     params["unit"], tokens = parse_string(tokens)
 
-    def coeffs(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def coeffs(tokens: Lexer) -> Tuple[Any, Lexer]:
         coeffs = []
         coeffs, tokens = parse_list_of_numbers(tokens[1:])
         return {"coeffs": coeffs}, tokens
 
-    def formula(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def formula(tokens: Lexer) -> Tuple[Any, Lexer]:
         tokens = tokens[1:]
         formula_inv = None
         formula = None
@@ -466,7 +466,7 @@ def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"compu_methods": [class_(**params)]}, tokens
 
 
-def compu_tab(tokens: Tokens) -> Tuple[Any, Tokens]:
+def compu_tab(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "COMPU_TAB":
         raise Exception("COMPU_TAB expected, got " + tokens[0])
 
@@ -481,7 +481,7 @@ def compu_tab(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"compu_tabs": [A2LCompuTab(**params)]}, tokens
 
 
-def compu_vtab(tokens: Tokens) -> Tuple[Any, Tokens]:
+def compu_vtab(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "COMPU_VTAB":
         raise Exception("COMPU_VTAB expected, got " + tokens[0])
 
@@ -510,7 +510,7 @@ def compu_vtab(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"compu_vtabs": [A2LCompuVTab(**params)]}, tokens[2:]
 
 
-def compu_vtab_range(tokens: Tokens) -> Tuple[Any, Tokens]:
+def compu_vtab_range(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "COMPU_VTAB_RANGE":
         raise Exception("COMPU_VTAB_RANGE expected, got " + tokens[0])
 
@@ -536,7 +536,7 @@ def compu_vtab_range(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"compu_vtab_ranges": [A2LCompuVTabRange(**params)]}, tokens[2:]
 
 
-def parse_matrix_dim(tokens: Tokens) -> Tuple[Any, Tokens]:
+def parse_matrix_dim(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "MATRIX_DIM":
         raise Exception("MATRIX_DIM expected, got " + tokens[0])
 
@@ -550,7 +550,7 @@ def parse_matrix_dim(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"matrix_dim": dimensions}, tokens
 
 
-def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
+def measurement(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
 
@@ -568,7 +568,7 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     tokens = tokens[6:]
 
-    def virtual_measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def virtual_measurement(tokens: Lexer) -> Tuple[Any, Lexer]:
         tokens = tokens[1:]
         variables = []
         while tokens[0] != "/end" or tokens[1] != "VIRTUAL":
@@ -576,7 +576,7 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
             tokens = tokens[1:]
         return {"virtual": VirtualMeasurement(variables)}, tokens[2:]
 
-    def format(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def format(tokens: Lexer) -> Tuple[Any, Lexer]:
         tokens = tokens[1:]
         f, tokens = parse_string(tokens)
         return {"format": f}, tokens
@@ -616,7 +616,7 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"measurements": [A2LMeasurement(**params)]}, tokens
 
 
-def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
+def record_layout(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "RECORD_LAYOUT":
         raise Exception("RECORD_LAYOUT expected, got " + tokens[0])
 
@@ -624,7 +624,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["name"] = tokens[1]
     tokens = tokens[2:]
 
-    def fnc_value(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def fnc_value(tokens: Lexer) -> Tuple[Any, Lexer]:
         params = {}
         params["position"] = parse_number(tokens.get_keyword(1))
         params["datatype"] = tokens[2]
@@ -632,7 +632,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
         params["addressing_mode"] = tokens[4]
         return {"fields": [A2lFncValues(**params)]}, tokens[5:]
 
-    def axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def axis_value(tokens: Lexer) -> Tuple[Any, Lexer]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens.get_keyword(1))
@@ -641,7 +641,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
         params["addressing_mode"] = tokens[4]
         return {"fields": [A2LRecordLayoutAxisPts(**params)]}, tokens[5:]
 
-    def rescale_axis(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def rescale_axis(tokens: Lexer) -> Tuple[Any, Lexer]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens.get_keyword(1))
@@ -651,7 +651,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
         params["addressing_mode"] = tokens[5]
         return {"fields": [A2lLRescaleAxis(**params)]}, tokens[6:]
 
-    def no_axis_value(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def no_axis_value(tokens: Lexer) -> Tuple[Any, Lexer]:
         params = {}
         params["axis"] = tokens[0]
         params["position"] = parse_number(tokens.get_keyword(1))
@@ -683,7 +683,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"record_layouts": [A2LRecordLayout(**params)]}, tokens
 
 
-def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
+def parse_annotation(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "ANNOTATION":
         raise Exception("ANNOTATION expected, got " + tokens[0])
 
@@ -691,11 +691,11 @@ def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     params = {}
 
-    def parse_s(tokens: Tokens, field: str) -> Tuple[dict, Tokens]:
+    def parse_s(tokens: Lexer, field: str) -> Tuple[dict, Lexer]:
         val, tokens = parse_string(tokens)
         return {field: val}, tokens
 
-    def parse_annotation_text(tokens: Tokens) -> Tuple[dict, Tokens]:
+    def parse_annotation_text(tokens: Lexer) -> Tuple[dict, Lexer]:
         text = None
         while tokens[0] != "/end" or tokens[1] != "ANNOTATION_TEXT":
             text, tokens = parse_string(tokens)
@@ -716,7 +716,7 @@ def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"annotations": [A2LAnnotation(**params)]}, tokens
 
 
-def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
+def parse_axis_descr(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "AXIS_DESCR":
         raise Exception("AXIS_DESCR expected, got " + tokens[0])
 
@@ -742,11 +742,11 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
 
     tokens = tokens[6:]
 
-    def fix_axis_par_dist(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def fix_axis_par_dist(tokens: Lexer) -> Tuple[Any, Lexer]:
         numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_dist": numbers}, tokens
 
-    def fix_axis_par_list(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def fix_axis_par_list(tokens: Lexer) -> Tuple[Any, Lexer]:
         numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_list": numbers}, tokens[2:]
 
@@ -765,7 +765,7 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
     return {"axis_descriptions": [axis_type(**params)]}, tokens
 
 
-def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
+def characteristic(tokens: Lexer) -> Tuple[Any, Lexer]:
     type_token = tokens.get(0)
 
     params = {}
@@ -801,7 +801,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     tokens = tokens[7:]
 
-    def dependent_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def dependent_characteristic(tokens: Lexer) -> Tuple[Any, Lexer]:
         tokens = tokens[1:]
         formula, tokens = parse_string(tokens)
         variables = []
@@ -812,7 +812,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
             "dependent_characteristic": DependentCharacteristic(formula, variables)
         }, tokens[2:]
 
-    def virtual_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
+    def virtual_characteristic(tokens: Lexer) -> Tuple[Any, Lexer]:
         tokens = tokens[1:]
         formula, tokens = parse_string(tokens)
         variables = []
@@ -877,7 +877,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"characteristics": [A2LCharacteristic(**params)]}, tokens
 
 
-def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
+def typedef_characteristic(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "TYPEDEF_CHARACTERISTIC":
         raise Exception("TYPEDEF_CHARACTERISTIC expected, got " + tokens[0])
 
@@ -947,7 +947,7 @@ def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"characteristics": [A2LCharacteristicTypedef(**params)]}, tokens
 
 
-def instance(tokens: Tokens) -> Tuple[Any, Tokens]:
+def instance(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "INSTANCE":
         raise Exception("INSTANCE expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -968,7 +968,7 @@ def instance(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"instances": [A2LInstance(**params)]}, tokens
 
 
-def axis_pts(tokens: Tokens) -> Tuple[Any, Tokens]:
+def axis_pts(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "AXIS_PTS":
         raise Exception("AXIS_PTS expected, got " + tokens[0])
 
@@ -995,7 +995,7 @@ def axis_pts(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"axis_pts": [A2LAxisPts(**params)]}, tokens
 
 
-def function_type(tokens: Tokens) -> Tuple[Any, Tokens]:
+def function_type(tokens: Lexer) -> Tuple[Any, Lexer]:
     if tokens[0] != "FUNCTION":
         raise Exception("FUNCTION expected, got " + tokens[0])
     tokens = tokens[1:]
@@ -1032,7 +1032,7 @@ def function_type(tokens: Tokens) -> Tuple[Any, Tokens]:
     return {"functions": [A2LFunction(**params)]}, tokens
 
 
-def assp2_version(tokens: Tokens) -> Tuple[dict, Tokens]:
+def assp2_version(tokens: Lexer) -> Tuple[dict, Lexer]:
     if tokens[0] != "ASAP2_VERSION":
         raise Exception("ASAP2_VERSION expected")
 
@@ -1043,7 +1043,7 @@ def assp2_version(tokens: Tokens) -> Tuple[dict, Tokens]:
 
 
 def read_a2l(path: Path) -> A2lFile:
-    tokens = Tokens.from_file(path)
+    tokens = Lexer.from_file(path)
 
     parser = {
         "ASAP2_VERSION": assp2_version,
