@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from pya2ltools.a2l.reader.token import Tokens
+from pya2ltools.a2l.reader.token import Lexer
 
 
 class TestReaderUtil(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestReaderUtil(unittest.TestCase):
         with open("test.a2l", "w") as f:
             f.write(content)
 
-        tokens = Tokens.from_file(Path("test.a2l"))
+        tokens = Lexer.from_file(Path("test.a2l"))
         expected = [
             "ASAP2_VERSION",
             " ",
@@ -41,7 +41,7 @@ class TestReaderUtil(unittest.TestCase):
         with open("test.a2l", "w") as f:
             f.write(content)
 
-        tokens = Tokens.from_file(Path("test.a2l"))
+        tokens = Lexer.from_file(Path("test.a2l"))
         expected = [
             "ASAP2_VERSION",
             " ",
