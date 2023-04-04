@@ -70,9 +70,9 @@ def parse_list_of_numbers(tokens: Tokens) -> Tuple[list[int], Tokens]:
 
 
 # a lexing function takes a list of tokens and returns a dictionary of str to Object and sublist of the tokens, after processing
-Lexer_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]
+Parser_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]
 
-Lexer = dict[str, Lexer_Func]
+Parser = dict[str, Parser_Func]
 
 
 def add_key_values(key_value: dict, params: dict) -> None:
@@ -90,7 +90,7 @@ def add_key_values(key_value: dict, params: dict) -> None:
 
 
 def parse_with_lexer(
-    lexer: Lexer,
+    parser: Parser,
     params: dict[str, Any],
     tokens: Tokens,
     name: str = None,
@@ -101,9 +101,9 @@ def parse_with_lexer(
         end_condition = lambda t: t[0] == "/end" and t[1] == name
 
     while not end_condition(tokens):
-        func = lexer.get(tokens[0], None)
+        func = parser.get(tokens[0], None)
         if func is None:
-            raise UnknownTokenError(tokens.get(0), expected=lexer.keys())
+            raise UnknownTokenError(tokens.get(0), expected=parser.keys())
         if found_keywords is not None:
             found_keywords.append(tokens[0])
         key_value, tokens = func(tokens)
