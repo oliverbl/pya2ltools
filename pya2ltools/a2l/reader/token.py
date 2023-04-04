@@ -26,7 +26,7 @@ class Token:
         return f"{self.filename}, line {self.line}:{self.pos}"
 
 
-class Tokens:
+class Lexer:
     def __init__(self, tokens: list[str], filepath: Path):
         self.tokens: list[Token] = tokens
         self.filepath = filepath
@@ -71,23 +71,23 @@ class Tokens:
         with path.open("r", encoding="utf-8-sig") as f:
             lines: list[str] = f.readlines()
         for no, line in enumerate(lines, start=1):
-            left, right = Tokens.get_left_and_right_whitespaces(line, no)
+            left, right = Lexer.get_left_and_right_whitespaces(line, no)
             tokens += left
 
             temp = line.strip()
             index = len(line) - len(line.lstrip())
-            temp = Tokens.split_and_preserve_delimiter(
+            temp = Lexer.split_and_preserve_delimiter(
                 temp, delimiter="//", line=no, pos=index + 1
             )
             for t in temp:
-                t2 = Tokens.split_and_preserve_delimiter(
+                t2 = Lexer.split_and_preserve_delimiter(
                     t.content, delimiter=" ", line=no, pos=t.pos
                 )
                 tokens += t2
             tokens += right
         for t in tokens:
             t.filename = path
-        return Tokens(tokens, filepath=path)
+        return Lexer(tokens, filepath=path)
 
     def _skip_comments_and_whitespaces(self, index) -> int:
         while index < len(self.tokens) and (
@@ -128,7 +128,7 @@ class Tokens:
         return max(len(self.tokens) - self._index, 0)
 
     def return_tokens_until(self, search_string: str) -> list[str]:
-        search_tokens = Tokens.split_and_preserve_delimiter(
+        search_tokens = Lexer.split_and_preserve_delimiter(
             search_string, delimiter=" ", line=0, pos=0
         )
         for i in range(len(self)):

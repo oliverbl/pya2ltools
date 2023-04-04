@@ -1,6 +1,6 @@
 from typing import Any, Callable, Tuple
 
-from .token import InvalidTypeError, Token, Tokens, UnknownTokenError
+from .token import InvalidTypeError, Token, Lexer, UnknownTokenError
 
 Number = float | int
 
@@ -61,7 +61,7 @@ def parse_members(tokens: list[str], field: str, name: str) -> Tuple[dict, list[
     return {field: members}, tokens[2:]
 
 
-def parse_list_of_numbers(tokens: Tokens) -> Tuple[list[int], Tokens]:
+def parse_list_of_numbers(tokens: Lexer) -> Tuple[list[int], Lexer]:
     numbers = []
     while is_number(tokens[0]):
         numbers.append(parse_number(tokens.get_keyword(0)))
@@ -92,11 +92,11 @@ def add_key_values(key_value: dict, params: dict) -> None:
 def parse_with_lexer(
     parser: Parser,
     params: dict[str, Any],
-    tokens: Tokens,
+    tokens: Lexer,
     name: str = None,
     found_keywords: list[str] = None,
-    end_condition: Callable[[Tokens], bool] = None,
-) -> Tokens:
+    end_condition: Callable[[Lexer], bool] = None,
+) -> Lexer:
     if end_condition is None:
         end_condition = lambda t: t[0] == "/end" and t[1] == name
 
