@@ -697,7 +697,7 @@ def write_project(project: A2LProject) -> str:
     return template.project.format(
         name=project.name,
         description=project.description,
-        header=write_header(project.header),
+        header=write_header(project.header) if project.header else "",
         modules=content,
     )
 

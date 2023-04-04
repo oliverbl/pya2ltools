@@ -1,28 +1,36 @@
 from pathlib import Path
-from dwarf.reader import DwarfInfo
 from a2l.reader.reader import read_a2l
+from argparse import ArgumentParser
+
+from update_a2l import update_a2l
 
 
-def test_dwarf():
-    path = Path("test_structs.o")
-
-    dwarf_info: DwarfInfo = DwarfInfo.from_elffile(path)
-
-    for name, var in dwarf_info.variables.items():
-        print(var)
-
-
-def test_a2l():
-    # path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171 simplified.a2l"
-    # path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171_reduced.a2l"
-    path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171.a2l"
-    a2l_file = read_a2l(path)
-    # print(a2l_file)
+def subcommand_update_a2l(parser: ArgumentParser):
+    parser.add_argument(
+        "--a2l_file", help="A2L file to update", required=True, type=Path
+    )
+    parser.add_argument(
+        "--elf_file",
+        help="ELF file to read ECU address info from",
+        required=True,
+        type=Path,
+    )
+    parser.add_argument("--output", help="Output file", required=False, type=Path)
+    parser.set_defaults(func=update_a2l)
 
 
 def main():
-    test_a2l()
-    test_dwarf()
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers(
+        dest="command", help="Available subcommands", required=True
+    )
+    subcommand_update_a2l(subparsers.add_parser("update_a2l", help="Update A2L file"))
+
+    args = parser.parse_args()
+    func_args = {
+        t[0]: t[1] for t in args._get_kwargs() if t[0] != "func" and t[0] != "command"
+    }
+    args.func(**func_args)
 
 
 if __name__ == "__main__":
