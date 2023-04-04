@@ -106,6 +106,9 @@ class A2LModule:
             if hasattr(item, "resolve_references"):
                 item.resolve_references(self._reference_dict)
 
+    def get_addressable_objects(self):
+        return self.characteristics + self.measurements + self.axis_pts
+
 
 @dataclass
 class A2LHeader:

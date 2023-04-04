@@ -104,7 +104,9 @@ def project(tokens: Lexer) -> Tuple[dict, Lexer]:
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
-    tokens = parse_with_lexer(parser=parser, name="PROJECT", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        parser=parser, name="PROJECT", tokens=tokens, params=params
+    )
     return (
         {"project": A2LProject(**params)},
         tokens[2:],
@@ -126,7 +128,9 @@ def header(tokens: Lexer) -> Tuple[dict, Lexer]:
         "VERSION": version,
         "PROJECT_NO": lambda x: ({"project_number": x[1]}, x[2:]),
     }
-    tokens = parse_with_lexer(parser=parser, name="HEADER", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        parser=parser, name="HEADER", tokens=tokens, params=params
+    )
     return {"header": A2LHeader(**params)}, tokens
 
 
@@ -290,7 +294,9 @@ def module(tokens: Lexer) -> Tuple[dict, Lexer]:
         "A2ML": a2ml,
     }
 
-    tokens = parse_with_lexer(parser=parser, name="MODULE", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        parser=parser, name="MODULE", tokens=tokens, params=params
+    )
     return {"modules": [A2LModule(**params, global_list=params.global_list)]}, tokens
 
 
@@ -344,7 +350,9 @@ def mod_par(tokens: Lexer) -> Tuple[Any, Lexer]:
         "MEMORY_SEGMENT": memory_segment,
         "SYSTEM_CONSTANT": system_constant,
     }
-    tokens = parse_with_lexer(parser=parser, name="MOD_PAR", tokens=tokens, params=params)
+    tokens = parse_with_lexer(
+        parser=parser, name="MOD_PAR", tokens=tokens, params=params
+    )
 
     return {"mod_par": [A2LModPar(**params)]}, tokens
 
