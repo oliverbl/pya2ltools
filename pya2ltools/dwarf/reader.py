@@ -29,9 +29,9 @@ def str_to_variable_path(path: str) -> list[str | int]:
 
 @dataclass
 class DwarfInfo:
-    variables: dict[str, DwarfVariable] = field(default_factory=dict)
+    variables: dict[str, list[DwarfVariable]] = field(default_factory=dict)
     # CU to datatype cache
-    cache: dict[Any, Any] = field(default_factory=dict)
+    __cache: dict[Any, Any] = field(default_factory=dict)
 
     @staticmethod
     def from_elffile(file, variable_name: str | None = None) -> Self:
@@ -80,7 +80,7 @@ class DwarfInfo:
                 if die.attributes["DW_AT_name"].value.decode("utf-8") != variable_name:
                     return
 
-            v = DwarfVariable.from_die(die, self.cache)
+            v = DwarfVariable.from_die(die, self.__cache)
             if v.name not in self.variables:
                 self.variables[v.name] = []
             self.variables[v.name].append(v)
