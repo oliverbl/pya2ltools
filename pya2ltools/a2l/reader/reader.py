@@ -18,7 +18,7 @@ from ..model.compu_methods import (
 )
 
 from .util import (
-    Lexer,
+    Parser,
     add_key_values,
     is_number,
     parse_list_of_numbers,
@@ -95,7 +95,7 @@ def project(tokens: Tokens) -> Tuple[dict, Tokens]:
         raise Exception("PROJECT expected, got " + tokens[0] + "")
 
     params = {}
-    lexer: Lexer = {
+    parser: Parser = {
         "/begin": lambda x: ({}, x[1:]),
         "HEADER": header,
         "MODULE": module,
@@ -104,7 +104,7 @@ def project(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
-    tokens = parse_with_lexer(lexer=lexer, name="PROJECT", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="PROJECT", tokens=tokens, params=params)
     return (
         {"project": A2LProject(**params)},
         tokens[2:],
@@ -122,11 +122,11 @@ def header(tokens: Tokens) -> Tuple[dict, Tokens]:
         version, tokens = parse_string(tokens[1:])
         return {"version": version}, tokens
 
-    lexer: Lexer = {
+    parser: Parser = {
         "VERSION": version,
         "PROJECT_NO": lambda x: ({"project_number": x[1]}, x[2:]),
     }
-    tokens = parse_with_lexer(lexer=lexer, name="HEADER", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="HEADER", tokens=tokens, params=params)
     return {"header": A2LHeader(**params)}, tokens
 
 
@@ -139,7 +139,7 @@ def group(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
 
-    lexer = {
+    parser = {
         "ROOT": lambda x: ({"root": True}, x[1:]),
         "/begin": lambda x: ({}, x[1:]),
         "SUB_GROUP": functools.partial(
@@ -156,7 +156,7 @@ def group(tokens: Tokens) -> Tuple[dict, Tokens]:
         ),
     }
 
-    tokens = parse_with_lexer(lexer=lexer, name="GROUP", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="GROUP", tokens=tokens, params=params)
     return {"groups": [A2LGroup(**params)]}, tokens
 
 
@@ -174,7 +174,7 @@ def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["event"] = tokens[1]
     params["reverse_transformer"] = tokens[2]
     tokens = tokens[3:]
-    lexer = {
+    parser = {
         "/begin": lambda x: ({}, x[1:]),
         "TRANSFORMER_IN_OBJECTS": functools.partial(
             parse_members, field="in_objects", name="TRANSFORMER_IN_OBJECTS"
@@ -184,7 +184,7 @@ def transformer(tokens: Tokens) -> Tuple[dict, Tokens]:
         ),
     }
     tokens = parse_with_lexer(
-        lexer=lexer, name="TRANSFORMER", tokens=tokens, params=params
+        parser=parser, name="TRANSFORMER", tokens=tokens, params=params
     )
     return {"transformers": [A2LTransformer(**params)]}, tokens
 
@@ -200,10 +200,10 @@ def blob(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["ecu_address"] = parse_number(tokens.get_keyword(0))
     params["number_of_bytes"] = parse_number(tokens.get_keyword(1))
     tokens = tokens[2:]
-    lexer = {
+    parser = {
         "CALIBRATION_ACCESS": lambda x: ({"calibration_access": x[1]}, x[2:]),
     }
-    tokens = parse_with_lexer(lexer=lexer, name="BLOB", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="BLOB", tokens=tokens, params=params)
     return {"blobs": [A2LBlob(**params)]}, tokens
 
 
@@ -230,12 +230,12 @@ def typedef_structure(tokens: Tokens) -> Tuple[dict, Tokens]:
             tokens = tokens[3:]
         return {"components": [A2LStructureComponent(**params)]}, tokens[2:]
 
-    lexer = {
+    parser = {
         "/begin": lambda x: ({}, x[1:]),
         "STRUCTURE_COMPONENT": lambda x: structure_component(x[1:]),
     }
     tokens = parse_with_lexer(
-        lexer=lexer, name="TYPEDEF_STRUCTURE", tokens=tokens, params=params
+        parser=parser, name="TYPEDEF_STRUCTURE", tokens=tokens, params=params
     )
     return {"typedef_structures": [A2LStructure(**params)]}, tokens
 
@@ -266,7 +266,7 @@ def module(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["name"] = tokens[1]
     params["description"], tokens = parse_string(tokens[2:])
 
-    lexer: Lexer = {
+    parser: Parser = {
         "/begin": lambda x: ({}, x[1:]),
         "MOD_PAR": mod_par,
         "MOD_COMMON": mod_common,
@@ -290,7 +290,7 @@ def module(tokens: Tokens) -> Tuple[dict, Tokens]:
         "A2ML": a2ml,
     }
 
-    tokens = parse_with_lexer(lexer=lexer, name="MODULE", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="MODULE", tokens=tokens, params=params)
     return {"modules": [A2LModule(**params, global_list=params.global_list)]}, tokens
 
 
@@ -316,9 +316,9 @@ def memory_segment(tokens: Tokens) -> Tuple[dict, Tokens]:
     params["size"] = parse_number(tokens.get_keyword(4))
     params["offsets"], tokens = parse_list_of_numbers(tokens[5:])
 
-    lexer = {"/begin": lambda x: ({}, x[1:]), "IF_DATA": if_data}
+    parser = {"/begin": lambda x: ({}, x[1:]), "IF_DATA": if_data}
     tokens = parse_with_lexer(
-        lexer=lexer, name="MEMORY_SEGMENT", tokens=tokens, params=params
+        parser=parser, name="MEMORY_SEGMENT", tokens=tokens, params=params
     )
     return {"memory_segments": [A2LMemorySegment(**params)]}, tokens
 
@@ -335,7 +335,7 @@ def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
         val, tokens = parse_string(tokens)
         return {"system_constants": {name: val}}, tokens
 
-    lexer = {
+    parser = {
         "NO_OF_INTERFACES": lambda x: (
             {"number_of_interfaces": parse_number(x.get_keyword(1))},
             x[2:],
@@ -344,7 +344,7 @@ def mod_par(tokens: Tokens) -> Tuple[Any, Tokens]:
         "MEMORY_SEGMENT": memory_segment,
         "SYSTEM_CONSTANT": system_constant,
     }
-    tokens = parse_with_lexer(lexer=lexer, name="MOD_PAR", tokens=tokens, params=params)
+    tokens = parse_with_lexer(parser=parser, name="MOD_PAR", tokens=tokens, params=params)
 
     return {"mod_par": [A2LModPar(**params)]}, tokens
 
@@ -356,7 +356,7 @@ def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
 
     params = {}
     params["description"], tokens = parse_string(tokens)
-    lexer = {
+    parser = {
         "DEPOSIT": lambda x: ({"deposit": x[1]}, x[2:]),
         "BYTE_ORDER": lambda x: ({"byte_order": ByteOrder(x[1])}, x[2:]),
         "ALIGNMENT_BYTE": lambda x: (
@@ -381,7 +381,7 @@ def mod_common(tokens: Tokens) -> Tuple[dict, Tokens]:
         ),
     }
     tokens = parse_with_lexer(
-        lexer=lexer, name="MOD_COMMON", tokens=tokens, params=params
+        parser=parser, name="MOD_COMMON", tokens=tokens, params=params
     )
     return {"mod_common": [A2LModCommon(**params)]}, tokens
 
@@ -451,7 +451,7 @@ def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
         params2, tokens = tab_intp(tokens)
         params.update(params2)
     else:
-        lexer = {
+        parser = {
             "COEFFS_LINEAR": coeffs,
             "COEFFS": coeffs,
             "STATUS_STRING_REF": lambda x: ({"status_string_ref": x[1]}, x[2:]),
@@ -460,7 +460,7 @@ def compu_method(tokens: Tokens) -> Tuple[Any, Tokens]:
             "COMPU_TAB_REF": lambda x: ({"compu_tab_ref": x[1]}, x[2:]),
         }
         tokens = parse_with_lexer(
-            lexer=lexer, name="COMPU_METHOD", params=params, tokens=tokens
+            parser=parser, name="COMPU_METHOD", params=params, tokens=tokens
         )
     class_ = compu_method_types[compu_method_type]
     return {"compu_methods": [class_(**params)]}, tokens
@@ -581,7 +581,7 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
         f, tokens = parse_string(tokens)
         return {"format": f}, tokens
 
-    lexer = {
+    parser = {
         "EXTENDED_LIMITS": lambda x: (
             {
                 "extended_min": parse_number(x.get_keyword(1)),
@@ -610,7 +610,7 @@ def measurement(tokens: Tokens) -> Tuple[Any, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="MEASUREMENT", tokens=tokens, params=params
+        parser=parser, name="MEASUREMENT", tokens=tokens, params=params
     )
 
     return {"measurements": [A2LMeasurement(**params)]}, tokens
@@ -658,7 +658,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
         params["datatype"] = tokens[2]
         return {"fields": [A2LRecordLayoutNoAxisPts(**params)]}, tokens[3:]
 
-    lexer = {
+    parser = {
         "FNC_VALUES": fnc_value,
         "AXIS_PTS_X": axis_value,
         "AXIS_PTS_Y": axis_value,
@@ -677,7 +677,7 @@ def record_layout(tokens: Tokens) -> Tuple[Any, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="RECORD_LAYOUT", tokens=tokens, params=params
+        parser=parser, name="RECORD_LAYOUT", tokens=tokens, params=params
     )
 
     return {"record_layouts": [A2LRecordLayout(**params)]}, tokens
@@ -701,7 +701,7 @@ def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
             text, tokens = parse_string(tokens)
         return {"text": text}, tokens[2:]
 
-    lexer = {
+    parser = {
         "ANNOTATION_LABEL": lambda x: functools.partial(parse_s, field="label")(x[1:]),
         "ANNOTATION_ORIGIN": lambda x: functools.partial(parse_s, field="origin")(
             x[1:]
@@ -711,7 +711,7 @@ def parse_annotation(tokens: Tokens) -> Tuple[Any, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="ANNOTATION", tokens=tokens, params=params
+        parser=parser, name="ANNOTATION", tokens=tokens, params=params
     )
     return {"annotations": [A2LAnnotation(**params)]}, tokens
 
@@ -750,7 +750,7 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
         numbers, tokens = parse_list_of_numbers(tokens[1:])
         return {"par_list": numbers}, tokens[2:]
 
-    lexer = {
+    parser = {
         "AXIS_PTS_REF": lambda x: ({"axis_pts_ref": x[1]}, x[2:]),
         "CURVE_AXIS_REF": lambda x: ({"curve_axis_ref": x[1]}, x[2:]),
         "MONOTONY": lambda x: ({"monotony": x[1]}, x[2:]),
@@ -760,7 +760,7 @@ def parse_axis_descr(tokens: Tokens) -> Tuple[dict, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="AXIS_DESCR", tokens=tokens, params=params
+        parser=parser, name="AXIS_DESCR", tokens=tokens, params=params
     )
     return {"axis_descriptions": [axis_type(**params)]}, tokens
 
@@ -823,7 +823,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
             "virtual_characteristic": VirtualCharacteristic(formula, variables)
         }, tokens[2:]
 
-    lexer = {
+    parser = {
         "EXTENDED_LIMITS": lambda x: (
             {
                 "extended_min": parse_number(x.get_keyword(1)),
@@ -853,7 +853,7 @@ def characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     found_keywords = []
 
     tokens = parse_with_lexer(
-        lexer=lexer,
+        parser=parser,
         name="CHARACTERISTIC",
         tokens=tokens,
         params=params,
@@ -915,7 +915,7 @@ def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
 
     tokens = tokens[6:]
 
-    lexer = {
+    parser = {
         "EXTENDED_LIMITS": lambda x: (
             {
                 "extended_min": parse_number(x.get_keyword(1)),
@@ -936,7 +936,7 @@ def typedef_characteristic(tokens: Tokens) -> Tuple[Any, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="TYPEDEF_CHARACTERISTIC", tokens=tokens, params=params
+        parser=parser, name="TYPEDEF_CHARACTERISTIC", tokens=tokens, params=params
     )
 
     field_names = [field.name for field in fields(char_type)]
@@ -957,12 +957,12 @@ def instance(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["description"], tokens = parse_string(tokens[1:])
     params["reference"] = tokens[0]
     params["ecu_address"] = parse_number(tokens.get_keyword(1))
-    lexer = {
+    parser = {
         "MATRIX_DIM": parse_matrix_dim,
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
     }
     tokens = parse_with_lexer(
-        lexer=lexer, name="INSTANCE", tokens=tokens[2:], params=params
+        parser=parser, name="INSTANCE", tokens=tokens[2:], params=params
     )
 
     return {"instances": [A2LInstance(**params)]}, tokens
@@ -986,11 +986,11 @@ def axis_pts(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["max"] = parse_number(tokens.get_keyword(7))
     tokens = tokens[8:]
 
-    lexer = {
+    parser = {
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
     }
     tokens = parse_with_lexer(
-        lexer=lexer, name="AXIS_PTS", tokens=tokens, params=params
+        parser=parser, name="AXIS_PTS", tokens=tokens, params=params
     )
     return {"axis_pts": [A2LAxisPts(**params)]}, tokens
 
@@ -1004,7 +1004,7 @@ def function_type(tokens: Tokens) -> Tuple[Any, Tokens]:
     params["name"] = tokens[0]
     params["description"], tokens = parse_string(tokens[1:])
 
-    lexer = {
+    parser = {
         "/begin": lambda x: ({}, x[1:]),
         "SUB_FUNCTION": functools.partial(
             parse_members, field="sub_functions", name="SUB_FUNCTION"
@@ -1027,7 +1027,7 @@ def function_type(tokens: Tokens) -> Tuple[Any, Tokens]:
     }
 
     tokens = parse_with_lexer(
-        lexer=lexer, name="FUNCTION", tokens=tokens, params=params
+        parser=parser, name="FUNCTION", tokens=tokens, params=params
     )
     return {"functions": [A2LFunction(**params)]}, tokens
 
@@ -1045,7 +1045,7 @@ def assp2_version(tokens: Tokens) -> Tuple[dict, Tokens]:
 def read_a2l(path: Path) -> A2lFile:
     tokens = Tokens.from_file(path)
 
-    lexer = {
+    parser = {
         "ASAP2_VERSION": assp2_version,
         "/begin": lambda x: ({}, x[1:]),
         "PROJECT": project,
@@ -1053,7 +1053,7 @@ def read_a2l(path: Path) -> A2lFile:
 
     params = {}
     parse_with_lexer(
-        lexer=lexer, tokens=tokens, params=params, end_condition=lambda x: len(x) == 0
+        parser=parser, tokens=tokens, params=params, end_condition=lambda x: len(x) == 0
     )
 
     return A2lFile(**params)
