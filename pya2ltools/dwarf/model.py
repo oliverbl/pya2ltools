@@ -68,11 +68,15 @@ class DwarfArray:
             if c.tag != "DW_TAG_subrange_type":
                 print("unexpected array child: ", c.tag)
                 continue
-            if "DW_AT_upper_bound" not in c.attributes:
-                print("array dimension without upper bound")
+
+            if "DW_AT_upper_bound" in c.attributes:
+                dimensions.append(c.attributes["DW_AT_upper_bound"].value + 1)
+            elif "DW_AT_count" in c.attributes:
+                dimensions.append(c.attributes["DW_AT_count"].value)
+            else:
+                print("array dimension without upper bound or count")
                 dimensions.append(0)
                 continue
-            dimensions.append(c.attributes["DW_AT_upper_bound"].value + 1)
         return dimensions
 
     @staticmethod
