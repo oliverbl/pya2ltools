@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from symtable import Symbol
 from typing import Any
 
 from .compu_methods import A2LCompuMethod
@@ -6,6 +7,12 @@ from .compu_methods import A2LCompuMethod
 from .mod_par_model import A2LIfData
 
 from .model import A2LAnnotation, A2LRecordLayout
+
+
+@dataclass
+class SymbolLink:
+    symbol_name: str
+    offset: int
 
 
 @dataclass
@@ -32,6 +39,7 @@ class A2LMeasurement:
     discrete: bool = False
     virtual: VirtualMeasurement | None = None
     if_data: list[A2LIfData] = field(default_factory=list)
+    symbol_link: SymbolLink | None = None
 
     def resolve_references(self, references: dict[str, Any]):
         self.compu_method = references[self.compu_method]
@@ -57,7 +65,7 @@ class A2LAxisDescription:
 
 @dataclass
 class A2LAxisDescriptionComAxis(A2LAxisDescription):
-    axis_pts_ref: str = ""
+    axis_pts_ref: str = None
 
     def resolve_references(self, references: dict[str, Any]):
         self.axis_pts_ref = references[self.axis_pts_ref]
@@ -171,6 +179,7 @@ class A2LCharacteristic:
     dependent_characteristic: DependentCharacteristic | None = None
     virtual_characteristic: VirtualCharacteristic | None = None
     model_link: str | None = None
+    symbol_link: SymbolLink | None = None
 
     def resolve_references(self, references: dict[str, Any]):
         self.typedef.resolve_references(references)
@@ -203,6 +212,7 @@ class A2LAxisPts:
     min: int
     max: int
     display_identifier: str | None = None
+    symbol_link: SymbolLink | None = None
 
     def resolve_references(self, references: dict[str, Any]):
         self.record_layout = references[self.record_layout]

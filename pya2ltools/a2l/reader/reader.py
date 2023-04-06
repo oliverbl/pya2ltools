@@ -66,6 +66,7 @@ from ..model.characteristic_model import (
     DependentCharacteristic,
     VirtualCharacteristic,
     VirtualMeasurement,
+    SymbolLink,
 )
 
 from ..model.project_model import (
@@ -82,6 +83,16 @@ from ..model.mod_par_model import (
     A2LMemorySegment,
     A2LModPar,
 )
+
+
+def parse_symbol_link(tokens: Lexer) -> Tuple[SymbolLink, Lexer]:
+    if tokens[0] != "SYMBOL_LINK":
+        raise Exception("SYMBOL_LINK expected")
+    tokens = tokens[1:]
+    params = {}
+    params["symbol_name"], tokens = parse_string(tokens)
+    params["offset"] = parse_number(tokens[0])
+    return {"symbol_link": SymbolLink(**params)}, tokens[1:]
 
 
 def a2ml(tokens: Lexer) -> Tuple[dict, Lexer]:
@@ -615,6 +626,7 @@ def measurement(tokens: Lexer) -> Tuple[Any, Lexer]:
         ),
         "IF_DATA": if_data,
         "VIRTUAL": lambda x: virtual_measurement(x),
+        "SYMBOL_LINK": lambda x: parse_symbol_link(x),
     }
 
     tokens = parse_with_lexer(
@@ -856,6 +868,7 @@ def characteristic(tokens: Lexer) -> Tuple[Any, Lexer]:
         "DEPENDENT_CHARACTERISTIC": lambda x: dependent_characteristic(x),
         "VIRTUAL_CHARACTERISTIC": lambda x: virtual_characteristic(x),
         "MODEL_LINK": lambda x: ({"model_link": x[1]}, x[2:]),
+        "SYMBOL_LINK": lambda x: parse_symbol_link(x),
     }
 
     found_keywords = []
@@ -996,6 +1009,7 @@ def axis_pts(tokens: Lexer) -> Tuple[Any, Lexer]:
 
     parser = {
         "DISPLAY_IDENTIFIER": lambda x: ({"display_identifier": x[1]}, x[2:]),
+        "SYMBOL_LINK": lambda x: parse_symbol_link(x),
     }
     tokens = parse_with_lexer(
         parser=parser, name="AXIS_PTS", tokens=tokens, params=params
