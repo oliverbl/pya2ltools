@@ -29,12 +29,11 @@ def update_a2l(a2l_file: Path, elf_file: Path, output: Path = None):
 
     for module in a2l.project.modules:
         for c in module.get_addressable_objects():
-            print(c)
             name = c.name
             offset = 0
             if c.symbol_link is not None:
                 offset = c.symbol_link.offset
                 name = c.symbol_link.symbol_name
             c.ecu_address = dwarf_info.get_address_by_variable_path(name) + offset
-            print(f"{c.name} = {c.ecu_address}")
+            print(f"{c.name} = {hex(c.ecu_address)}")
     write_a2l_file(a2l, output)
