@@ -1,6 +1,8 @@
 
 #include <stdint.h>
 
+#define MEM_SEC_PARAMETER __attribute__((section(".parameter")))
+
 typedef struct
 {
     uint8_t a;
@@ -26,14 +28,14 @@ typedef struct RecursiveStruct
     uint8_t a;
 } RecursiveStruct;
 
-static SomeA someA = { 0, 1 };
-static NestedStruct nestedStruct = { { 0, 1 }, 2 };
+MEM_SEC_PARAMETER static SomeA someA = { 69, 42 };
+MEM_SEC_PARAMETER static NestedStruct nestedStruct = { { 0, 1 }, 2 };
 
-static SomeEnum someEnum = SomeEnumA;
+MEM_SEC_PARAMETER static SomeEnum someEnum = SomeEnumA;
 
-static NestedStruct nestedStructArray[2] = { { { 0, 1 }, 2 }, { { 3, 4 }, 5 } };
+MEM_SEC_PARAMETER static NestedStruct nestedStructArray[2] = { { { 0, 1 }, 2 }, { { 3, 4 }, 5 } };
 
-static RecursiveStruct recursiveStruct = { 0 };
+MEM_SEC_PARAMETER static RecursiveStruct recursiveStruct = { 0 };
 
 int main(int argc, char** argv) {
 
