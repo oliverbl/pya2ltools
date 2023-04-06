@@ -10,3 +10,4 @@ __pycache__/
 .coverage
 poetry.lock
 .venv/
+test/arm_project/out/
