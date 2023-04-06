@@ -20,7 +20,7 @@ ASAP2_VERSION 1 71
         DISPLAY_IDENTIFIER SomeIdentifier
     /end CHARACTERISTIC
 
-    /begin CHARACTERISTIC someA.b
+    /begin CHARACTERISTIC SomeVariable
         "Test"
         VALUE
         0x1
@@ -28,7 +28,8 @@ ASAP2_VERSION 1 71
         0
         NO_COMPU_METHOD
         0 255
-        DISPLAY_IDENTIFIER SomeIdentifierB
+        DISPLAY_IDENTIFIER SomeIdentifier
+        SYMBOL_LINK "someA.b" 0
     /end CHARACTERISTIC
 
     /end MODULE

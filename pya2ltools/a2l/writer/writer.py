@@ -250,6 +250,9 @@ def write_measurement(measurement: A2LMeasurement) -> str:
             elements="\t\t\t\\n".join(measurement.virtual.variables)
         )
 
+    if measurement.symbol_link is not None:
+        optional_args += f'\n\t\t\t\tSYMBOL_LINK "{measurement.symbol_link.symbol_name}" {measurement.symbol_link.offset}'
+
     return template.measurement.format(
         name=measurement.name,
         description=measurement.description,
@@ -445,6 +448,11 @@ def write_characteristic(characteristic: A2LCharacteristic):
             ),
         )
 
+    if characteristic.symbol_link is not None:
+        args[
+            "optional_args"
+        ] += f'\n\t\t\t\tSYMBOL_LINK "{characteristic.symbol_link.symbol_name}" {characteristic.symbol_link.offset}'
+
     return template.characteristic.format(
         name=characteristic.name,
         description=characteristic.description,
@@ -466,6 +474,10 @@ def write_axis_pts(axis: A2LAxisPts):
     optional_args = ""
     if axis.display_identifier is not None:
         optional_args += f"\n\t\t\t\tDISPLAY_IDENTIFIER {axis.display_identifier}"
+
+    if axis.symbol_link is not None:
+        optional_args += f'\n\t\t\t\tSYMBOL_LINK "{axis.symbol_link.symbol_name}" {axis.symbol_link.offset}'
+
     return template.axis_pts.format(
         name=axis.name,
         description=axis.description,
@@ -473,7 +485,7 @@ def write_axis_pts(axis: A2LAxisPts):
         record_layout=axis.record_layout.name,
         measurement=axis.measurement.name,
         offset=axis.offset,
-        compu_method=axis.compu_method.name,
+        compu_method=axis.compu_method.name if axis.compu_method else "NO_COMPU_METHOD",
         max=axis.max,
         min=axis.min,
         max_number_sample_points=axis.max_number_sample_points,

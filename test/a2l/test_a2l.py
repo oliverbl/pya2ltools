@@ -35,6 +35,16 @@ class TestA2l(unittest.TestCase):
             print(e)
             self.assertTrue(True)
 
+    def test_a2l_with_sybol_links(self):
+        path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171_reduced.a2l"
+        output = Path("a2l_out.a2l")
+        try:
+            a2l_file = read_a2l(path)
+            write_a2l_file(a2l_file, path)
+        except Exception as e:
+            print(e)
+            self.assertTrue(False)
+
     def tearDownClass() -> None:
         Path("a2l_out.a2l").unlink()
         Path("a2l_out2.a2l").unlink()
