@@ -109,6 +109,31 @@ class A2LModule:
     def get_addressable_objects(self):
         return self.characteristics + self.measurements + self.axis_pts
 
+    def __add__(self, other):
+        if isinstance(other, A2LModule):
+            self.characteristics += other.characteristics
+            self.measurements += other.measurements
+            self.compu_methods += other.compu_methods
+            self.axis_pts += other.axis_pts
+            self.compu_tabs += other.compu_tabs
+            self.compu_vtabs += other.compu_vtabs
+            self.compu_vtab_ranges += other.compu_vtab_ranges
+            self.groups += other.groups
+            self.functions += other.functions
+            self.mod_common += other.mod_common
+            self.mod_par += other.mod_par
+            self.record_layouts += other.record_layouts
+            self.typedef_characteristics += other.typedef_characteristics
+            self.typedef_structures += other.typedef_structures
+            self.typedef_axes += other.typedef_axes
+            self.instances += other.instances
+            self.transformers += other.transformers
+            self.blobs += other.blobs
+            self.if_data += other.if_data
+            self.global_list += other.global_list
+            self._reference_dict.update(other._reference_dict)
+        return self
+
 
 @dataclass
 class A2LHeader:
@@ -130,3 +155,8 @@ class A2lFile:
     project: A2LProject
     asap2_version: str = ""
     a2ml_version: str = ""
+
+    def __add__(self, other):
+        if isinstance(other, A2lFile):
+            self.project.modules[0] += other.project.modules[0]
+        return self
