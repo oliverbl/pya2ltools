@@ -35,17 +35,21 @@ class Lexer:
     @staticmethod
     def split_and_preserve_delimiter(
         text: str, delimiter: str, line: int, pos: int
-    ) -> list[str]:
+    ) -> list[Token]:
         tokens = []
         while True:
             index = text.find(delimiter)
             if index == -1:
-                tokens.append(Token(text, line=line, pos=pos))
+                if text:
+                    tokens.append(Token(text, line=line, pos=pos))
                 break
-            tokens.append(Token(text[:index], line=line, pos=pos))
+            t = text[:index]
+            if t:
+                tokens.append(Token(t, line=line, pos=pos))
             tokens.append(Token(delimiter, line=line, pos=index + pos))
             pos += index + len(delimiter)
             text = text[index + len(delimiter) :]
+
         return tokens
 
     @staticmethod
