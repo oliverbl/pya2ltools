@@ -12,7 +12,11 @@ def main():
     )
     subcommand_update_a2l(subparsers.add_parser("update_a2l", help="Update A2L file"))
     subcommand_merge_a2l(subparsers.add_parser("merge_a2l", help="Merge A2L files"))
-    subcommand_read_calibration_data(subparsers.add_parser("create_calibration_data", help="Read calibration data from hex file"))
+    subcommand_read_calibration_data(
+        subparsers.add_parser(
+            "create_calibration_data", help="Read calibration data from hex file"
+        )
+    )
 
     args = parser.parse_args()
     func_args = {

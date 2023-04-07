@@ -4,6 +4,7 @@ import struct
 from a2l.reader.reader import read_a2l
 from intelhex import IntelHex
 
+
 def subcommand_read_calibration_data(parser: ArgumentParser):
     parser.add_argument(
         "--a2l_file", help="A2L file to create Data Model for", required=True, type=Path

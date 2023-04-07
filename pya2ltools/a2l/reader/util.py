@@ -70,7 +70,7 @@ def parse_list_of_numbers(tokens: Lexer) -> Tuple[list[int], Lexer]:
 
 
 # a lexing function takes a list of tokens and returns a dictionary of str to Object and sublist of the tokens, after processing
-Parser_Func = Callable[[list[str]], Tuple[dict[str, Any], list[str]]]
+Parser_Func = Callable[[Lexer], Tuple[dict[str, Any], Lexer]]
 
 Parser = dict[str, Parser_Func]
 
@@ -112,5 +112,4 @@ def parse_with_lexer(
 
 
 def format_hex(value: int) -> str:
-    # return f"0x{value:08X}"
     return "0x" + hex(value).upper()[2:]

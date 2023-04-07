@@ -66,18 +66,19 @@ class TestReaderUtil(unittest.TestCase):
 
 
 def test_split_and_preserve_delimiter(self):
-    
-        t = Lexer.split_and_preserve_delimiter('"" // comment', "//", 0, 0)
-        expected = ['"" ', "//", " comment"]
-        self.assertEqual(expected, t)
+    t = Lexer.split_and_preserve_delimiter('"" // comment', "//", 0, 0)
+    expected = ['"" ', "//", " comment"]
+    self.assertEqual(expected, t)
 
-        t2 = Lexer.split_and_preserve_delimiter(' comment', " ", 0, 0)
-        expected = [" ", "comment"]
-        self.assertEqual(expected, t2)
+    t2 = Lexer.split_and_preserve_delimiter(" comment", " ", 0, 0)
+    expected = [" ", "comment"]
+    self.assertEqual(expected, t2)
 
-        t3 = Lexer.split_and_preserve_delimiter('/begin PROJECT ASAP2_Example "" // comment', "//", 0, 0)
-        expected = ['/begin PROJECT ASAP2_Example "" ', "//", " comment"]
-        self.assertEqual(expected, t3)
-        t4 = Lexer.split_and_preserve_delimiter('//', " ", 0, 0)
-        expected = ["//"]
-        self.assertEqual(expected, t4)
+    t3 = Lexer.split_and_preserve_delimiter(
+        '/begin PROJECT ASAP2_Example "" // comment', "//", 0, 0
+    )
+    expected = ['/begin PROJECT ASAP2_Example "" ', "//", " comment"]
+    self.assertEqual(expected, t3)
+    t4 = Lexer.split_and_preserve_delimiter("//", " ", 0, 0)
+    expected = ["//"]
+    self.assertEqual(expected, t4)
