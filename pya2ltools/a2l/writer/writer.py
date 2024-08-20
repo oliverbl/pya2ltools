@@ -6,8 +6,6 @@ from ..reader.reader import measurement, record_layout
 
 from ..reader.util import format_hex
 
-from ..model.mod_par_model import A2LIfData, A2LMemorySegment, A2LModPar
-
 from ..model.model import (
     A2LBlob,
     A2LCompuTab,
@@ -23,20 +21,17 @@ from ..model.model import (
     A2LTransformer,
     A2lFncValues,
     A2lLRescaleAxis,
-)
-
-from ..model.compu_methods import (
-    A2LCompuMethod,
+    A2LIfData,
+    A2LMemorySegment,
+    A2LModPar,
+        A2LCompuMethod,
     A2LCompuMethodFormula,
     A2LCompuMethodLinear,
     A2LCompuMethodRational,
     A2LCompuMethodTableInterpolation,
     A2LCompuMethodTableNoInterpolation,
     A2LCompuMethodVerbalTable,
-)
-
-from ..model.characteristic_model import (
-    A2LAxisDescription,
+        A2LAxisDescription,
     A2LAxisDescriptionComAxis,
     A2LAxisDescriptionCurveAxis,
     A2LAxisDescriptionFixAxis,
@@ -257,7 +252,11 @@ def write_measurement(measurement: A2LMeasurement) -> str:
         name=measurement.name,
         description=measurement.description,
         datatype=measurement.datatype,
-        compu_method=measurement.compu_method.name,
+        compu_method=(
+            measurement.compu_method.name
+            if measurement.compu_method is not None
+            else "NO_COMPU_METHOD"
+        ),
         offset_1=measurement.offset_1,
         offset_2=measurement.offset_2,
         min=str(measurement.min),
@@ -349,12 +348,16 @@ def write_axis_desc(axis_desc: A2LAxisDescription):
 
     return template.axis_description.format(
         type=types[type(axis_desc)],
-        measurement=axis_desc.measurement.name
-        if axis_desc.measurement is not None
-        else "NO_INPUT_QUANTITY",
-        compu_method=axis_desc.compu_method.name
-        if axis_desc.compu_method is not None
-        else "NO_COMPU_METHOD",
+        measurement=(
+            axis_desc.measurement.name
+            if axis_desc.measurement is not None
+            else "NO_INPUT_QUANTITY"
+        ),
+        compu_method=(
+            axis_desc.compu_method.name
+            if axis_desc.compu_method is not None
+            else "NO_COMPU_METHOD"
+        ),
         size=axis_desc.size,
         min=axis_desc.min,
         max=axis_desc.max,
@@ -591,9 +594,11 @@ def write_typedef_axis(typedef_axis: A2LTypedefAxis) -> str:
         description=typedef_axis.description,
         measurement=typedef_axis.measurement.name,
         record_layout=typedef_axis.record_layout.name,
-        compu_method=typedef_axis.compu_method.name
-        if typedef_axis.compu_method
-        else "NO_COMPU_METHOD",
+        compu_method=(
+            typedef_axis.compu_method.name
+            if typedef_axis.compu_method
+            else "NO_COMPU_METHOD"
+        ),
         max_diff=typedef_axis.max_diff,
         max_number_of_axis_points=typedef_axis.max_number_of_axis_points,
         lower_limit=typedef_axis.lower_limit,

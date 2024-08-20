@@ -7,19 +7,8 @@ from .dict_with_index import DictWithIndex
 
 from .token import InvalidKeywordError, MissingKeywordError, Lexer, UnknownTokenError
 
-from ..model.compu_methods import (
-    A2LCompuMethod,
-    A2LCompuMethodFormula,
-    A2LCompuMethodLinear,
-    A2LCompuMethodRational,
-    A2LCompuMethodTableInterpolation,
-    A2LCompuMethodTableNoInterpolation,
-    A2LCompuMethodVerbalTable,
-)
-
 from .util import (
     Parser,
-    add_key_values,
     is_number,
     parse_list_of_numbers,
     parse_members,
@@ -44,14 +33,20 @@ from ..model.model import (
     A2lFncValues,
     A2lLRescaleAxis,
     ByteOrder,
-)
-from ..model.characteristic_model import (
+    A2LCompuMethod,
+    A2LCompuMethodFormula,
+    A2LCompuMethodLinear,
+    A2LCompuMethodRational,
+    A2LCompuMethodTableInterpolation,
+    A2LCompuMethodTableNoInterpolation,
+    A2LCompuMethodVerbalTable,
     A2LAxisDescription,
     A2LAxisDescriptionComAxis,
     A2LAxisDescriptionCurveAxis,
     A2LAxisDescriptionFixAxis,
     A2LAxisDescriptionResAxis,
     A2LAxisPts,
+    A2LBaseType,
     A2LCharacteristic,
     A2LCharacteristicArray,
     A2LCharacteristicCube4,
@@ -67,6 +62,8 @@ from ..model.characteristic_model import (
     VirtualCharacteristic,
     VirtualMeasurement,
     SymbolLink,
+    A2LMemorySegment,
+    A2LModPar,
 )
 
 from ..model.project_model import (
@@ -77,11 +74,7 @@ from ..model.project_model import (
     A2LModule,
     A2LProject,
     A2lFile,
-)
-from ..model.mod_par_model import (
     A2LIfData,
-    A2LMemorySegment,
-    A2LModPar,
 )
 
 
@@ -569,7 +562,7 @@ def parse_matrix_dim(tokens: Lexer) -> Tuple[Any, Lexer]:
     return {"matrix_dim": dimensions}, tokens
 
 
-def measurement(tokens: Lexer) -> Tuple[Any, Lexer]:
+def measurement(tokens: Lexer) -> Tuple[dict[str, list[A2LMeasurement]], Lexer]:
     if tokens[0] != "MEASUREMENT":
         raise Exception("MEASUREMENT expected, got " + tokens[0])
 
@@ -578,7 +571,7 @@ def measurement(tokens: Lexer) -> Tuple[Any, Lexer]:
     description, tokens = parse_string(tokens[2:])
     params["description"] = description
 
-    params["datatype"] = tokens[0]
+    params["datatype"] = A2LBaseType.from_string(tokens[0])
     params["compu_method"] = tokens[1]
     params["offset_1"] = tokens[2]
     params["offset_2"] = tokens[3]
