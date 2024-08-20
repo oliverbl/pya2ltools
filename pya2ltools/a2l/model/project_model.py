@@ -1,18 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Any, Optional, Self
 
-from .compu_methods import A2LCompuMethod
 
-from .mod_par_model import A2LModPar, A2LIfData
-
-from .characteristic_model import (
-    A2LAxisPts,
-    A2LCharacteristic,
-    A2LMeasurement,
-    A2LCharacteristicTypedef,
-    A2LTypedefAxis,
-)
 from .model import (
+    A2LModPar,
+    A2LIfData,
     A2LBlob,
     A2LCompuTab,
     A2LCompuVTab,
@@ -22,6 +14,12 @@ from .model import (
     A2LRecordLayout,
     A2LStructure,
     A2LTransformer,
+    A2LCompuMethod,
+    A2LAxisPts,
+    A2LCharacteristic,
+    A2LMeasurement,
+    A2LCharacteristicTypedef,
+    A2LTypedefAxis,
 )
 
 

@@ -71,9 +71,13 @@ class Lexer:
     def from_file(path: Path | str) -> Self:
         if isinstance(path, str):
             path = Path(path)
-        tokens: list[Token] = []
         with path.open("r", encoding="utf-8-sig") as f:
             lines: list[str] = f.readlines()
+        return Lexer.parse_lines(lines, path)
+
+    @staticmethod
+    def parse_lines(lines: list[str], path: Path) -> Self:
+        tokens: list[Token] = []
         for no, line in enumerate(lines, start=1):
             left, right = Lexer.get_left_and_right_whitespaces(line, no)
             tokens += left
@@ -92,6 +96,10 @@ class Lexer:
         for t in tokens:
             t.filename = path
         return Lexer(tokens, filepath=path)
+
+    @staticmethod
+    def from_string(text: str) -> Self:
+        return Lexer.parse_lines(text.splitlines(), Path(""))
 
     def _skip_comments_and_whitespaces(self, index) -> int:
         while index < len(self.tokens) and (
