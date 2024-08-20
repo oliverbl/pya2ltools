@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from a2l.reader.reader import read_a2l
-from dwarf.reader import DwarfInfo
-from a2l.writer.writer import write_a2l_file
+from ..reader.reader import read_a2l
+from ...dwarf.reader import DwarfInfo
+from ..writer.writer import write_a2l_file
 
 
 def subcommand_update_a2l(parser: ArgumentParser):
