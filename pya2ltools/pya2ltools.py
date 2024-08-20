@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 
-from a2l.tools.update_a2l import subcommand_update_a2l
-from a2l.tools.merge_a2l import subcommand_merge_a2l
-from a2l.tools.read_calibration_data import subcommand_read_calibration_data
+from .a2l.tools.update_a2l import subcommand_update_a2l
+from .a2l.tools.merge_a2l import subcommand_merge_a2l
+from .a2l.tools.read_calibration_data import subcommand_read_calibration_data
 
 
 def main():
