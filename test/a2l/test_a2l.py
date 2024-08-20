@@ -21,13 +21,13 @@ class TestA2l(unittest.TestCase):
         #     m_new = a2l_file_new.project.modules[0].global_list[i]
         #     self.assertEqual(m, m_new)
 
-        # for i, c in enumerate(a2l_file.project.modules[0].characteristics):
-        #     c_new = a2l_file_new.project.modules[0].characteristics[i]
-        #     self.assertEqual(c, c_new)
+        for i, c in enumerate(a2l_file.project.modules[0].characteristics):
+            c_new = a2l_file_new.project.modules[0].characteristics[i]
+            self.assertEqual(c, c_new)
 
     def test_a2l_error(self):
         path = Path("test") / "ECU_Description" / "ASAP2_Error.a2l"
-        # output = Path("a2l_out.a2l")
+        output = Path("a2l_out.a2l")
         try:
             a2l_file = read_a2l(path)
             self.assertFalse(True)
@@ -35,7 +35,7 @@ class TestA2l(unittest.TestCase):
             print(e)
             self.assertTrue(True)
 
-    def test_a2l_with_sybol_links(self):
+    def test_a2l_with_symbol_links(self):
         path = Path("test") / "ECU_Description" / "ASAP2_Demo_V171_reduced.a2l"
         output = Path("a2l_out.a2l")
         try:
