@@ -1,3 +1,4 @@
+from re import sub
 import unittest
 from parameterized import parameterized_class
 import itertools
@@ -32,10 +33,35 @@ int main(int argc, char** argv) {{
 @parameterized_class(
     ("compiler", "dwarf_version"),
     itertools.product(
-        ["gcc", "clang", "arm-none-eabi-gcc"], ["-gdwarf-3", "-gdwarf-4", "-gdwarf-5"]
+        ["gcc", "clang", "arm-none-eabi-gcc"],
+        ["-gdwarf-3", "-gdwarf-4", "-gdwarf-5"],
     ),
 )
 class TestDwarfReader(unittest.TestCase):
+
+    def install_compiler(self):
+
+        if self.compiler == "arm-none-eabi-gcc":
+            pkg = "gcc-arm-none-abi"
+        else:
+            pkg = self.compiler
+
+        compiler_check = ["which", self.compiler]
+        try:
+            subprocess.run(compiler_check, check=True, cwd=current_folder)
+            return
+        except subprocess.CalledProcessError:
+            print(f"{self.compiler} not installed. Installing.")
+
+        args = ["sudo", "apt", "update"]
+        subprocess.run(args, check=True, cwd=current_folder)
+        args = ["sudo", "apt", "-y", "install", pkg]
+        try:
+            subprocess.run(args, check=True, cwd=current_folder)
+        except subprocess.CalledProcessError:
+            print(f"{self.compiler} could not be installed. Skip")
+            raise unittest.SkipTest()
+
     def setUp(self):
         self.input = (
             current_folder / f"{self.compiler}_{self.dwarf_version}_test_structs_temp.c"
@@ -43,6 +69,7 @@ class TestDwarfReader(unittest.TestCase):
         self.output = (
             current_folder / f"{self.compiler}_{self.dwarf_version}_test_structs_temp.o"
         )
+        self.install_compiler()
 
     def compiler_call(self, input=None, output=None):
         if input is None:
