@@ -1,0 +1,42 @@
+ASAP2_VERSION 1 71
+/begin PROJECT ASAP2_Example ""
+
+
+
+    /begin MODULE Example ""
+    
+    /begin RECORD_LAYOUT _UBYTE
+        FNC_VALUES 1 UBYTE ROW_DIR DIRECT
+    /end RECORD_LAYOUT
+
+    /begin CHARACTERISTIC characteristicWithSymbolLink
+        ""
+        VALUE
+        0x0
+        _UBYTE
+        0
+        NO_COMPU_METHOD
+        0 65535
+        SYMBOL_LINK "ECU_address" 0
+    /end CHARACTERISTIC
+
+    /begin MEASUREMENT MeasurementWithSymbolLink
+        "measureemnt with symbol link"
+        UBYTE NO_COMPU_METHOD 0 0 0 255
+        ECU_ADDRESS 0x13A00
+        SYMBOL_LINK "ECU_addressMeasurement" 0
+    /end MEASUREMENT
+
+    /begin AXIS_PTS AxisWithSymbolLink
+        "Common axis for "
+        0x810340
+        MeasurementWithSymbolLink
+        _UBYTE
+        0
+        NO_COMPU_METHOD
+        8
+        0 255
+    /end AXIS_PTS
+
+    /end MODULE
+/end PROJECT
