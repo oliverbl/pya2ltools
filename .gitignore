@@ -3,6 +3,8 @@ docs/
 .devcontainer/
 test/ti/
 test/ECU_Description/
+!test/ECU_Description/ASAP2_Error.a2l
+!test/ECU_Description/ASAP2_Demo_V171_reduced.a2l
 __pycache__/
 *.txt
 *.json

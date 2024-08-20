@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import enum
 from typing import Any, Self, Tuple
 
+
 @dataclass
 class A2LIfData:
     name: str
@@ -48,12 +49,14 @@ class A2LBaseType:
             return s
         raise ValueError(f"{s} not a valid base type")
 
+
 @dataclass
 class A2LCompuMethod:
     name: str
     description: str
     format: str
     unit: str
+
 
 @dataclass
 class A2LRecordLayoutAxisPts:
@@ -67,6 +70,7 @@ class A2LRecordLayoutAxisPts:
     def __post__init__(self):
         self.datatype = A2LBaseType.from_string(self.datatype)
 
+
 @dataclass
 class A2LRecordLayoutNoAxisPts:
     axis: str
@@ -75,6 +79,7 @@ class A2LRecordLayoutNoAxisPts:
 
     def __post__init__(self):
         self.datatype = A2LBaseType.from_string(self.datatype)
+
 
 @dataclass
 class A2lLRescaleAxis:
@@ -88,6 +93,7 @@ class A2lLRescaleAxis:
 
     def __post__init__(self):
         self.datatype = A2LBaseType.from_string(self.datatype)
+
 
 @dataclass
 class A2lFncValues:
@@ -103,11 +109,9 @@ class A2lFncValues:
 @dataclass
 class A2LRecordLayout:
     name: str = ""
-    fields: list[
-        A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues
-    ] = field(default_factory=list)
-
-
+    fields: list[A2LRecordLayoutNoAxisPts | A2LRecordLayoutAxisPts | A2lFncValues] = (
+        field(default_factory=list)
+    )
 
 
 @dataclass
@@ -198,8 +202,6 @@ class A2LInstance:
 
     def resolve_references(self, references: dict[str, Any]):
         self.reference = references[self.reference]
-
-
 
 
 base_types = {
@@ -442,6 +444,7 @@ class A2LTypedefAxis:
         self.compu_method = references[self.compu_method]
         self.measurement = references[self.measurement]
 
+
 @dataclass
 class A2LCompuTab:
     name: str
@@ -449,9 +452,6 @@ class A2LCompuTab:
     table_type: str | None = None
     values: dict[int, int] = field(default_factory=dict)
     default_value: float | None = None
-
-
-
 
 
 @dataclass

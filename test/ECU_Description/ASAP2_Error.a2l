@@ -1,0 +1,25 @@
+﻿ASAP2_VERSION 1 71
+/begin PROJECT ASAP2_Example ""
+ 
+  /begin MODULE Example ""
+
+    /begin A2ML
+    TESTTESTTES
+    /end A2ML
+
+    /begin CHARACTERISTIC 
+      ASAM.C.ASCII.UBYTE.NUMBER_42
+      "ASCII string"
+      ASCII 
+      0x810200
+      RL.FNC.UBYTE.ROW_DIR 
+      0 
+      CM.IDENTICAL 
+      0 255 
+      NUMBER 42 
+      DISPLAY_IDENTIFIER DI.ASAM.C.ASCII.UBYTE.NUMBER_42
+    /end CHARACTERISTIC 
+
+  /end MODULE
+/end PROJECT
+ 
